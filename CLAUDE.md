@@ -79,3 +79,20 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Sideload: `adb install -r tool/build/outputs/apk/debug/tool-debug.apk`.
 - Full-fidelity testing (permissions, service binding) needs either LP3 hardware or
   the LightOS emulator set up as a system app — see `docs/system_app/`.
+
+### Open technical risks — barcodes (UNRESOLVED)
+Barcodes are the core of this tool, and both directions have an open question against
+the SDK's constraints. Resolve these before committing to an implementation; re-check
+after each `/sync-upstream` in case the allow-list or scanner changes.
+- **Rendering (generating) codes** — No barcode/QR generation library is on the
+  dependency allow-list (e.g. ZXing is blocked; see "What I'm allowed to use"). Likely
+  paths: (a) draw the code myself with Compose Canvas from the stored value, or
+  (b) ask Light to add a generation library to the allow-list. QR is a simpler
+  self-draw than most 1D symbologies.
+- **Reading (scanning) codes** — The built-in `LightQrCodeScanner` targets QR codes,
+  but many loyalty/membership cards use 1D barcodes (Code128, UPC/EAN, Code39). Unknown
+  whether it decodes those. If it doesn't, options: manual entry only for 1D cards, or
+  an allow-list request for a scanning library.
+- **Practical fallback for v1** — Manual entry (type the number + pick the code type)
+  needs neither camera nor a scanning library, so it can ship independent of the above.
+  Camera import and on-device rendering can follow once the two questions are settled.
