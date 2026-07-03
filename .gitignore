@@ -44,4 +44,5 @@ bin/
 .DS_Store
 
 ### Clanker ###
-.claude/
+.claude/*
+!.claude/commands/
