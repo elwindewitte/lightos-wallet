@@ -46,3 +46,8 @@ bin/
 ### Clanker ###
 .claude/*
 !.claude/commands/
+
+### Conductor ###
+# Personal, machine-specific run scripts — never commit. A shared
+# .conductor/settings.toml (no absolute paths) is fine to commit.
+.conductor/settings.local.toml
