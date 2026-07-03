@@ -2,11 +2,12 @@
 
 ## What this tool is (and is not)
 Purpose: A Light Phone III tool that stores loyalty and membership cards and displays their barcodes / QR codes for scanning in-store.
-In scope (v1): manually add a card (name + code value + code type); store it locally
-on the device; list saved cards; open one to display its code full-screen, high
-contrast, for scanning.
-Out of scope (v1): scanning a physical card to import it (needs camera access —
-UNVERIFIED whether the SDK allows it); cloud sync or accounts; payment/NFC cards; sharing.
+In scope (v1): manually add a card (name + code value + code type); scan a physical
+card with the camera to import its code (the SDK allows camera access and ships a
+built-in `LightQrCodeScanner` — see Permissions below); store cards locally on the
+device; list saved cards; open one to display its code full-screen, high contrast,
+for scanning.
+Out of scope (v1): cloud sync or accounts; payment/NFC cards; sharing.
 If unsure whether something is in scope, ask me — do not add features.
 
 ## Design constraints (non-negotiable)
@@ -56,10 +57,10 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
   `plugin/.../LightToolMetadata.kt`.
 - **Camera IS allowed** (`android.permission.CAMERA`), and the SDK ships a built-in
-  `LightQrCodeScanner` composable that handles the permission flow. So the v1
-  "out of scope" note about camera being UNVERIFIED is now resolved: scanning is
-  *technically possible*. It's still out of scope until I say otherwise — flag it,
-  don't build it.
+  `LightQrCodeScanner` composable that handles the permission flow. This is what
+  backs the in-scope "scan a physical card to import it" feature. Note the built-in
+  scanner targets QR codes — verify it reads the 1D barcodes many loyalty cards use,
+  or plan a fallback, before relying on it.
 - Runtime request: `rememberPermissionRequestLauncher(Manifest.permission.CAMERA)`
   then `.launch()`; check with `checkPermission(...)`.
 
