@@ -71,6 +71,19 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Files: `lightContext.filesDir`; share-to-LightOS via `lightContext.fileShare`.
 - Background work: `androidx.work` wrapped as `LightWork` + `@LightJob`.
 
+### Usage measurement (open counts)
+- We record how many times each card is opened, to enable a future "most used"
+  sort. Implemented in `tool/.../CardStatsStore.kt` (DataStore/Preferences), wired
+  through `HomeScreenViewModel.recordOpened()`; exposed as
+  `HomeScreenViewModel.openCounts` (`Map<name, count>`).
+- Not consumed for sorting yet — we're only collecting the data. Search still
+  defaults to recents order (in-memory), then alphabetical.
+- Keyed by card **name** (the only stable id the v1 `LoyaltyCard` has), so a
+  rename starts a fresh count. Revisit when cards get a stable id / real
+  persistence. Counts persist across sessions; the recents order does not.
+- Stays within the design constraints: this is local, silent measurement — no
+  telemetry, notifications, or re-engagement mechanics.
+
 ### Build & sideload
 - Credentials: SDK libs come from GitHub Packages. Set `gpr.user`/`gpr.key` in
   `local.properties` (or env `GITHUB_ACTOR`/`GITHUB_TOKEN`).
