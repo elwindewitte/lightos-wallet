@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewModelScope
 import com.thelightphone.sdk.InitialScreen
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.LightViewModel
@@ -28,18 +27,13 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /** Whether the home screen is browsing the full list or searching within it. */
 enum class HomeMode { Browse, Search }
 
-class HomeScreenViewModel(
-    private val stats: CardStatsStore,
-) : LightViewModel<Unit>() {
+class HomeScreenViewModel : LightViewModel<Unit>() {
 
     // Seed cards for now; manual add / local storage come later. Kept sorted
     // alphabetically (case-insensitive) so the browse list is easy to scan.
@@ -58,11 +52,6 @@ class HomeScreenViewModel(
     private val _recentNames = MutableStateFlow<List<String>>(emptyList())
     val recentNames: StateFlow<List<String>> = _recentNames.asStateFlow()
 
-    // Persistent per-card open counts. Not consumed for sorting yet — we're
-    // collecting the data now so a "most used" view can use it later.
-    val openCounts: StateFlow<Map<String, Int>> =
-        stats.openCounts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-
     fun enterSearch() {
         _mode.value = HomeMode.Search
     }
@@ -71,10 +60,9 @@ class HomeScreenViewModel(
         _mode.value = HomeMode.Browse
     }
 
-    /** Record that a card was opened: bump recents and the persistent open count. */
+    /** Record that a card was opened so it bubbles to the top of recents. */
     fun recordOpened(card: LoyaltyCard) {
         _recentNames.value = listOf(card.name) + _recentNames.value.filterNot { it == card.name }
-        viewModelScope.launch { stats.recordOpen(card.name) }
     }
 
     // Consume the hardware back button to leave search mode instead of exiting.
@@ -94,7 +82,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     override val viewModelClass: Class<HomeScreenViewModel>
         get() = HomeScreenViewModel::class.java
 
-    override fun createViewModel() = HomeScreenViewModel(CardStatsStore(lightContext.dataStore))
+    override fun createViewModel() = HomeScreenViewModel()
 
     @Composable
     override fun Content() {
