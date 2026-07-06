@@ -1,6 +1,6 @@
 [tool]
 id = "com.thelightphone.app"
-label = "Light Wallet"
+label = "Wallet"
 versionCode = 1
 versionName = "1.0"
 permissions = ["android.permission.INTERNET"]
