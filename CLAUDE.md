@@ -57,11 +57,11 @@ Use the `lightContext` wrapper instead of a raw Context.
 ### Permissions
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
   `plugin/.../LightToolMetadata.kt`.
-- **Camera IS allowed** (`android.permission.CAMERA`), and the SDK ships a built-in
-  `LightQrCodeScanner` composable that handles the permission flow. This is what
-  backs the in-scope "scan a physical card to import it" feature. Note the built-in
-  scanner targets QR codes — verify it reads the 1D barcodes many loyalty cards use,
-  or plan a fallback, before relying on it.
+- **Camera IS allowed** (`android.permission.CAMERA`, now declared in
+  `tool/lighttool.toml`). The SDK ships `LightQrCodeScanner` (QR only); this fork adds
+  `LightBarcodeScanner`, which scans a chosen set of `LightBarcodeFormat` (QR + 1D) and
+  reports the detected format. Both handle the permission flow. See "How the tool is
+  built › Camera scanning" for how the tool uses it.
 - Runtime request: `rememberPermissionRequestLauncher(Manifest.permission.CAMERA)`
   then `.launch()`; check with `checkPermission(...)`.
 
@@ -81,14 +81,53 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Full-fidelity testing (permissions, service binding) needs either LP3 hardware or
   the LightOS emulator set up as a system app — see `docs/system_app/`.
 
-### Supported code types & rendering (RESOLVED)
-Rendering is the core of this tool, and it is done — no allow-list change was needed.
-The generation risk is closed; only scanning of 1D barcodes remains open (see below).
+## How the tool is built (current architecture)
 
-**Supported symbologies** — the `CodeType` enum (`tool/.../code/CodeType.kt`) is the
-source of truth. A card stores only its raw value + `CodeType`; nothing is stored as
-an image. `CodeEncoder.encode(value, type)` turns that pair into drawable geometry at
-display time.
+Everything lives in `tool/src/main/kotlin/com/thelightphone/wallet/`, split into screens
+(top level), `data/` (Room persistence), and `code/` (code encoding + Canvas rendering).
+Re-verify the SDK fork edits noted below after each `/sync-upstream`.
+
+### Storage — Room, one source of truth
+- `LoyaltyCard` (`LoyaltyCard.kt`) is the UI model: `id` (stable row id), `name`, `code`,
+  `codeType`. Rename / delete / selection key on `id`, so two cards may share a name.
+- `data/`: `CardEntity` (`@Entity "cards"`), `CardDao` (`observeCards(): Flow`, plus
+  `suspend` `insert` / `rename` / `deleteByIds`), `WalletDatabase` (`@Database`), and
+  `CardRepository` — a process singleton (`getInstance { … }`) that maps entity↔model and
+  exposes `observeCards(): Flow<List<LoyaltyCard>>`. Follows the `examples/authenticator`
+  pattern.
+- Wiring: `HomeScreen` builds the repository once in a field via
+  `lightContext.buildDatabase(WalletDatabase::class.java, CardRepository.DATABASE_NAME)`
+  and passes it to `HomeScreenViewModel`, which surfaces the list with
+  `repository.observeCards().stateIn(...)`. Writes are fire-and-forget on
+  `viewModelScope`; the Room `Flow` re-emits, so there is no in-memory list to keep in
+  sync. No seed data — a fresh install starts empty (Browse shows an empty-state hint).
+
+### Screens & navigation
+- `HomeScreen` (`@InitialScreen`) — the card list. One screen, three modes via the
+  `HomeMode` enum: **Browse** (list + Search / EDIT / ＋ bottom bar), **Search**, and
+  **Select** (bulk-delete). `onBackPressed()` consumes hardware back to leave
+  Search/Select rather than exit the tool.
+- `CardDetailScreen` — opens one card and renders its code full-screen (see rendering).
+  The ⋯ button opens `CardOptionsScreen` (Edit / Delete). Edits are pushed back to the
+  list through `onRename(id, …)` / `onDelete(id)` callbacks (not screen results) so they
+  survive the hardware back button, which pops without a result.
+- Edit / delete: `CardOptionsScreen` → `EditCardNameScreen` (rename) or
+  `DeleteCardConfirmScreen` (confirm). Bulk delete runs from Home's Select mode through
+  the same confirm screen.
+- Add flow: `HomeScreen` ＋ → `ScanCardScreen` → `NameCardScreen` → save. The scanner is
+  popped before the name screen is pushed (SDK camera guidance: `goBack` then the caller
+  `navigateTo`s). `ScanCardScreen`'s "Enter manually" fallback runs `EnterCodeScreen` →
+  `PickCodeTypeScreen` and converges on the same `NameCardScreen`; both routes yield a
+  `ScannedCode(code, codeType)`.
+- Conventions: go forward with `navigateTo(screenFactory = { … }, resultCallback = { … })`;
+  `goBack(result)` returns a value, while `goBack(null)` / `goBack()` delivers no result (a
+  cancel) — a `resultCallback` only fires for a non-null result.
+
+### Supported code types & rendering (RESOLVED)
+Rendering is the core of this tool, and it is done — no allow-list change was needed. A
+card stores only its raw value + `CodeType` (`tool/.../code/CodeType.kt`, the source of
+truth); nothing is stored as an image. `CodeEncoder.encode(value, type)` turns that pair
+into drawable geometry at display time.
 
 | `CodeType` | Symbology            | Kind | Accepted input |
 | ---------- | -------------------- | ---- | -------------- |
@@ -100,6 +139,8 @@ display time.
 | `CODE_39`  | Code 39              | 1D   | uppercased `0-9 A-Z` and `- . space $ / + %` |
 | `ITF`      | Interleaved 2 of 5   | 1D   | an even number of digits |
 
+`CodeType` also carries `is2d` and `displayLabel` (labels for the manual type picker).
+
 **How they're drawn** — all encoders are plain Kotlin, vendored as source under
 `tool/.../code/`, no Gradle dependency and no Android APIs (passes the plugin
 guardrails; see "What I'm allowed to use"):
@@ -109,19 +150,38 @@ guardrails; see "What I'm allowed to use"):
   `CodeGeometry.BarPattern` (run-length bar/space widths). GS1 for EAN/UPC, ISO/IEC
   15417 for Code 128, ISO/IEC 16388 for Code 39 and ITF.
 - `CodeGeometry.kt` is the drawable model; `CardCodeView.kt` scales it to fill the
-  screen on a Compose Canvas. Invalid input throws `Barcode1DEncoders.EncodeException`.
+  screen on a Compose Canvas — black on white with a quiet-zone border, snapped to whole
+  pixels for crisp scanning. Invalid input throws `Barcode1DEncoders.EncodeException`.
 
-Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder.
-The set is deliberately small for v1 and grows as real cards turn up types we don't
-yet handle.
+Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder. The set
+is deliberately small for v1 and grows as real cards turn up types we don't yet handle.
 
-### Open technical risk — scanning 1D barcodes (UNRESOLVED)
-Rendering (above) is done; **reading** codes with the camera is still open. Re-check
-after each `/sync-upstream` in case the built-in scanner changes.
-- The built-in `LightQrCodeScanner` targets QR codes, but many loyalty/membership
-  cards use 1D barcodes (Code 128, UPC/EAN, Code 39). Unknown whether it decodes
-  those. If it doesn't, options: manual entry only for 1D cards, or an allow-list
-  request for a scanning library.
-- **Practical fallback for v1** — Manual entry (type the number + pick the code type)
-  needs neither camera nor a scanning library, so it ships independent of scanning.
-  Camera import can follow once this question is settled.
+### Camera scanning (SDK fork edit — re-verify after `/sync-upstream`)
+- The tool cannot own the camera: the guardrail blocks `LocalContext`, and CameraX / ML
+  Kit are `implementation`-only in `sdk/ui` (not on the tool's classpath). The camera
+  lives in the SDK; the tool owns the *screen*.
+- This fork generalizes `sdk/ui/.../LightQrCodeScanner.kt` and adds a public
+  `LightBarcodeScanner` (+ a permission-wrapping twin in
+  `sdk/client/.../LightClientUiUtils.kt`). It scans a caller-chosen
+  `Set<LightBarcodeFormat>` and reports `(value, LightBarcodeFormat)`. ML Kit auto-detects
+  the symbology, so there is **no QR-vs-barcode prompt** — `ScanCardScreen` maps the
+  detected format straight to a `CodeType` and only enables the formats the tool can
+  render. The original QR-only `LightQrCodeScanner` is left intact (still used by the
+  examples), so this is an additive change.
+
+### Text input & the LP3 keyboard
+- Name / code entry uses the SDK `LightTextInputEditor` (`EditCardNameScreen`,
+  `NameCardScreen`, `EnterCodeScreen`). Each **must** be a `LightScreen` (owning its own
+  ViewModelStore) with a **distinct editor title** — the SDK caches the keyboard view
+  model by title, so a shared title leaves later editors unresponsive.
+- Search uses the embedded keyboard directly (`SearchContent` + `SearchKeyboardCallback`);
+  its default order is most-recently-opened, with recents tracked in-memory by `id`.
+
+### Barcodes — RESOLVED
+Both former open risks are closed. Codes are **rendered** by self-drawing on Canvas (see
+"Supported code types & rendering"), and 1D + QR codes are **scanned** with the camera via
+the fork's multi-format `LightBarcodeScanner` (see "Camera scanning") — this supersedes the
+earlier "scanning 1D barcodes unresolved" note. Manual entry (`EnterCodeScreen` →
+`PickCodeTypeScreen`) remains as a camera-free fallback. One thing to keep honest: ML Kit's
+`rawValue` must match what the `Barcode1DEncoders` expect so a scanned code re-renders
+identically (e.g. EAN/UPC check digits) — verify when adding a symbology.

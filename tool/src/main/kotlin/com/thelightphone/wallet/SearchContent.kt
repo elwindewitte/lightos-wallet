@@ -65,7 +65,7 @@ private const val CURSOR_WIDTH_DP = 2
 @Composable
 fun SearchContent(
     cards: List<LoyaltyCard>,
-    recentNames: List<String>,
+    recentIds: List<Long>,
     onClose: () -> Unit,
     onOpen: (LoyaltyCard) -> Unit,
 ) {
@@ -90,13 +90,13 @@ fun SearchContent(
     }
 
     // Recents (opened cards, most-recent first), then the rest alphabetically.
-    val recentCards = remember(cards, recentNames) {
-        val byName = cards.associateBy { it.name }
-        recentNames.mapNotNull { byName[it] }
+    val recentCards = remember(cards, recentIds) {
+        val byId = cards.associateBy { it.id }
+        recentIds.mapNotNull { byId[it] }
     }
     val allOrdered = remember(cards, recentCards) {
-        val recentSet = recentCards.map { it.name }.toSet()
-        recentCards + cards.filter { it.name !in recentSet }
+        val recentSet = recentCards.map { it.id }.toSet()
+        recentCards + cards.filter { it.id !in recentSet }
     }
     // Empty query shows only recents; typing searches across every card.
     val visible = if (query.isEmpty()) {

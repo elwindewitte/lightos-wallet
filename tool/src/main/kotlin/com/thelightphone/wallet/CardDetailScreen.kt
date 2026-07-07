@@ -47,14 +47,14 @@ class CardDetailViewModel(initialName: String) : LightViewModel<Unit>() {
  * via the constructor.
  *
  * List mutations are pushed straight back via [onRename] / [onDelete] (keyed by
- * the card's current name) rather than returned as results, so they survive the
+ * the card's stable id) rather than returned as results, so they survive the
  * hardware back button — which pops the screen without carrying a result.
  */
 class CardDetailScreen(
     sealedActivity: SealedLightActivity,
     private val card: LoyaltyCard,
-    private val onRename: (oldName: String, newName: String) -> Unit,
-    private val onDelete: (name: String) -> Unit,
+    private val onRename: (id: Long, newName: String) -> Unit,
+    private val onDelete: (id: Long) -> Unit,
 ) : LightScreen<Unit, CardDetailViewModel>(sealedActivity) {
 
     override val viewModelClass: Class<CardDetailViewModel>
@@ -89,12 +89,12 @@ class CardDetailScreen(
                                 resultCallback = { option ->
                                     when (option) {
                                         is CardOption.Rename -> {
-                                            onRename(current, option.newName)
+                                            onRename(card.id, option.newName)
                                             viewModel.setName(option.newName)
                                         }
 
                                         CardOption.Delete -> {
-                                            onDelete(current)
+                                            onDelete(card.id)
                                             goBack()
                                         }
                                     }

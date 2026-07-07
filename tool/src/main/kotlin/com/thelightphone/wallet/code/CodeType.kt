@@ -22,3 +22,15 @@ enum class CodeType {
 /** True for 2D symbologies, which render as a module matrix rather than bars. */
 val CodeType.is2d: Boolean
     get() = this == CodeType.QR
+
+/** Human-readable name for the symbology, shown in the manual code-type picker. */
+val CodeType.displayLabel: String
+    get() = when (this) {
+        CodeType.QR -> "QR code"
+        CodeType.CODE_128 -> "Code 128"
+        CodeType.EAN_13 -> "EAN-13"
+        CodeType.EAN_8 -> "EAN-8"
+        CodeType.UPC_A -> "UPC-A"
+        CodeType.CODE_39 -> "Code 39"
+        CodeType.ITF -> "ITF"
+    }
