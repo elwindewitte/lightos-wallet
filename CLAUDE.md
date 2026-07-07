@@ -48,10 +48,11 @@ kotlinx-serialization, kotlinx-io, `androidx.core:core-splashscreen`,
 Blocked: raw Android APIs — `android.content.Context`/`Intent`/`BroadcastReceiver`,
 `LocalContext.current`, `startActivity`, `getSystemService`, reflection.
 Use the `lightContext` wrapper instead of a raw Context.
-- **No barcode/QR *generation* library is on the allow-list** (e.g. ZXing is blocked).
-  Resolved by drawing every code ourselves on Compose Canvas — see the `code/` package
-  (`CodeEncoder`, `QrEncoder`, `Barcode1DEncoders`, `CardCodeView`). Keep any new
-  symbology self-drawn rather than reaching for a library.
+- IMPORTANT for this tool: **no barcode/QR *generation* library is on the allow-list**
+  (e.g. ZXing is not allowed). We render every code ourselves from dependency-free,
+  plain-Kotlin encoders vendored as source under `tool/.../code/` — no Gradle
+  dependency, no Android APIs, so they pass the plugin guardrails. See "Supported
+  code types & rendering" below for the symbologies and how they're drawn.
 
 ### Permissions
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
@@ -122,14 +123,38 @@ Re-verify the SDK fork edits noted below after each `/sync-upstream`.
   `goBack(result)` returns a value, while `goBack(null)` / `goBack()` delivers no result (a
   cancel) — a `resultCallback` only fires for a non-null result.
 
-### Code rendering (`code/`) — self-drawn, nothing stored as an image
-- `CodeType` enum: `QR` plus 1D `CODE_128`, `EAN_13`, `EAN_8`, `UPC_A`, `CODE_39`, `ITF`.
-  Helpers: `is2d`, `displayLabel` (labels for the manual type picker).
-- `CodeEncoder.encode(value, type)` dispatches to `QrEncoder` (a vendored, dependency-free
-  Nayuki port) or `Barcode1DEncoders`, producing a `CodeGeometry` (`QrMatrix` for 2D,
-  `BarPattern` run-lengths for 1D). `CardCodeView` draws that on a Compose `Canvas` — black
-  on white with a quiet-zone border, snapped to whole pixels for crisp scanning.
-- Cards persist only value + type; the image is drawn on the fly at display time.
+### Supported code types & rendering (RESOLVED)
+Rendering is the core of this tool, and it is done — no allow-list change was needed. A
+card stores only its raw value + `CodeType` (`tool/.../code/CodeType.kt`, the source of
+truth); nothing is stored as an image. `CodeEncoder.encode(value, type)` turns that pair
+into drawable geometry at display time.
+
+| `CodeType` | Symbology            | Kind | Accepted input |
+| ---------- | -------------------- | ---- | -------------- |
+| `QR`       | QR Code              | 2D   | any UTF-8 string (byte mode) |
+| `CODE_128` | Code 128             | 1D   | ASCII 32–126; auto Code C for digit runs, else Code B |
+| `EAN_13`   | EAN-13               | 1D   | 12 digits (check digit appended) or 13 |
+| `EAN_8`    | EAN-8                | 1D   | 7 digits (check digit appended) or 8 |
+| `UPC_A`    | UPC-A                | 1D   | 11 digits (check digit appended) or 12 |
+| `CODE_39`  | Code 39              | 1D   | uppercased `0-9 A-Z` and `- . space $ / + %` |
+| `ITF`      | Interleaved 2 of 5   | 1D   | an even number of digits |
+
+`CodeType` also carries `is2d` and `displayLabel` (labels for the manual type picker).
+
+**How they're drawn** — all encoders are plain Kotlin, vendored as source under
+`tool/.../code/`, no Gradle dependency and no Android APIs (passes the plugin
+guardrails; see "What I'm allowed to use"):
+- `QrEncoder.kt` — a trimmed MIT-licensed port of Nayuki's QR generator (byte mode,
+  auto version + ECC boost, full mask selection). Emits a `CodeGeometry.QrMatrix`.
+- `Barcode1DEncoders.kt` — the five 1D symbologies, each producing a
+  `CodeGeometry.BarPattern` (run-length bar/space widths). GS1 for EAN/UPC, ISO/IEC
+  15417 for Code 128, ISO/IEC 16388 for Code 39 and ITF.
+- `CodeGeometry.kt` is the drawable model; `CardCodeView.kt` scales it to fill the
+  screen on a Compose Canvas — black on white with a quiet-zone border, snapped to whole
+  pixels for crisp scanning. Invalid input throws `Barcode1DEncoders.EncodeException`.
+
+Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder. The set
+is deliberately small for v1 and grows as real cards turn up types we don't yet handle.
 
 ### Camera scanning (SDK fork edit — re-verify after `/sync-upstream`)
 - The tool cannot own the camera: the guardrail blocks `LocalContext`, and CameraX / ML
@@ -153,8 +178,10 @@ Re-verify the SDK fork edits noted below after each `/sync-upstream`.
   its default order is most-recently-opened, with recents tracked in-memory by `id`.
 
 ### Barcodes — RESOLVED
-Both former open risks are closed: codes are **rendered** by self-drawing on Canvas
-(`code/`), and **scanned** via the fork's multi-format `LightBarcodeScanner`. Manual entry
-(`EnterCodeScreen` → `PickCodeTypeScreen`) remains as a camera-free fallback. One thing to
-keep honest: ML Kit's `rawValue` must match what the `Barcode1DEncoders` expect so a scanned
-code re-renders identically (e.g. EAN/UPC check digits) — verify when adding a symbology.
+Both former open risks are closed. Codes are **rendered** by self-drawing on Canvas (see
+"Supported code types & rendering"), and 1D + QR codes are **scanned** with the camera via
+the fork's multi-format `LightBarcodeScanner` (see "Camera scanning") — this supersedes the
+earlier "scanning 1D barcodes unresolved" note. Manual entry (`EnterCodeScreen` →
+`PickCodeTypeScreen`) remains as a camera-free fallback. One thing to keep honest: ML Kit's
+`rawValue` must match what the `Barcode1DEncoders` expect so a scanned code re-renders
+identically (e.g. EAN/UPC check digits) — verify when adding a symbology.
