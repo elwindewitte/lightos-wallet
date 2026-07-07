@@ -35,6 +35,7 @@ import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
+import com.thelightphone.wallet.code.CodeType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,12 +48,20 @@ enum class HomeMode { Browse, Search, Select }
 
 class HomeScreenViewModel : LightViewModel<Unit>() {
 
-    // Seed cards for now; manual add / local storage come later. Kept sorted
-    // alphabetically (case-insensitive) so the browse list is easy to scan.
+    // Seed cards for now; manual add / local storage come later. Each carries a
+    // sample code + symbology so the detail screen renders, spanning the render
+    // paths (1D barcodes and QR). Kept sorted alphabetically (case-insensitive).
     private val _cards = MutableStateFlow(
-        listOf("Gamma", "Shell", "Praxis", "Albert Heijn", "Jumbo", "Bouwmaat")
-            .map { LoyaltyCard(it) }
-            .sortedBy { it.name.lowercase() },
+        listOf(
+            // Real card codes (verified renderable/scannable); Jumbo is a placeholder
+            // that keeps the ITF render path demoable until a real ITF card turns up.
+            LoyaltyCard("Gamma", "2616115044662", CodeType.EAN_13),
+            LoyaltyCard("Shell GO+", "70041804751219410", CodeType.CODE_128),
+            LoyaltyCard("Praxis Plus", "2742004106927", CodeType.QR),
+            LoyaltyCard("Albert Heijn", "2620694989726", CodeType.EAN_13),
+            LoyaltyCard("Bouwmaat", "9901315001", CodeType.CODE_39),
+            LoyaltyCard("Jumbo", "12345678", CodeType.ITF),
+        ).sortedBy { it.name.lowercase() },
     )
     val cards: StateFlow<List<LoyaltyCard>> = _cards.asStateFlow()
 

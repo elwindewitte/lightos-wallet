@@ -16,8 +16,6 @@ import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.ui.LightBarButton
 import com.thelightphone.sdk.ui.LightIcons
-import com.thelightphone.sdk.ui.LightText
-import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
@@ -107,18 +105,15 @@ class CardDetailScreen(
                     modifier = Modifier.padding(bottom = 1f.gridUnitsAsDp()),
                 )
 
+                // Full-bleed white code surface, top-aligned just below the header; the
+                // theme background fills the space beneath it (see the mockups).
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 1f.gridUnitsAsDp()),
-                    contentAlignment = Alignment.Center,
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    LightText(
-                        text = "Code coming soon",
-                        variant = LightTextVariant.Copy,
-                        lighten = true,
-                    )
+                    CardCodeSurface(code = card.code, codeType = card.codeType)
                 }
             }
         }
