@@ -49,9 +49,10 @@ Blocked: raw Android APIs — `android.content.Context`/`Intent`/`BroadcastRecei
 `LocalContext.current`, `startActivity`, `getSystemService`, reflection.
 Use the `lightContext` wrapper instead of a raw Context.
 - IMPORTANT for this tool: **no barcode/QR *generation* library is on the allow-list**
-  (e.g. ZXing is not allowed). Rendering a card's code will need either a custom
-  Compose/Canvas implementation or an allow-list request to Light. Verify before
-  committing to an approach.
+  (e.g. ZXing is not allowed). We render every code ourselves from dependency-free,
+  plain-Kotlin encoders vendored as source under `tool/.../code/` — no Gradle
+  dependency, no Android APIs, so they pass the plugin guardrails. See "Supported
+  code types & rendering" below for the symbologies and how they're drawn.
 
 ### Permissions
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
@@ -80,19 +81,47 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Full-fidelity testing (permissions, service binding) needs either LP3 hardware or
   the LightOS emulator set up as a system app — see `docs/system_app/`.
 
-### Open technical risks — barcodes (UNRESOLVED)
-Barcodes are the core of this tool, and both directions have an open question against
-the SDK's constraints. Resolve these before committing to an implementation; re-check
-after each `/sync-upstream` in case the allow-list or scanner changes.
-- **Rendering (generating) codes** — No barcode/QR generation library is on the
-  dependency allow-list (e.g. ZXing is blocked; see "What I'm allowed to use"). Likely
-  paths: (a) draw the code myself with Compose Canvas from the stored value, or
-  (b) ask Light to add a generation library to the allow-list. QR is a simpler
-  self-draw than most 1D symbologies.
-- **Reading (scanning) codes** — The built-in `LightQrCodeScanner` targets QR codes,
-  but many loyalty/membership cards use 1D barcodes (Code128, UPC/EAN, Code39). Unknown
-  whether it decodes those. If it doesn't, options: manual entry only for 1D cards, or
-  an allow-list request for a scanning library.
+### Supported code types & rendering (RESOLVED)
+Rendering is the core of this tool, and it is done — no allow-list change was needed.
+The generation risk is closed; only scanning of 1D barcodes remains open (see below).
+
+**Supported symbologies** — the `CodeType` enum (`tool/.../code/CodeType.kt`) is the
+source of truth. A card stores only its raw value + `CodeType`; nothing is stored as
+an image. `CodeEncoder.encode(value, type)` turns that pair into drawable geometry at
+display time.
+
+| `CodeType` | Symbology            | Kind | Accepted input |
+| ---------- | -------------------- | ---- | -------------- |
+| `QR`       | QR Code              | 2D   | any UTF-8 string (byte mode) |
+| `CODE_128` | Code 128             | 1D   | ASCII 32–126; auto Code C for digit runs, else Code B |
+| `EAN_13`   | EAN-13               | 1D   | 12 digits (check digit appended) or 13 |
+| `EAN_8`    | EAN-8                | 1D   | 7 digits (check digit appended) or 8 |
+| `UPC_A`    | UPC-A                | 1D   | 11 digits (check digit appended) or 12 |
+| `CODE_39`  | Code 39              | 1D   | uppercased `0-9 A-Z` and `- . space $ / + %` |
+| `ITF`      | Interleaved 2 of 5   | 1D   | an even number of digits |
+
+**How they're drawn** — all encoders are plain Kotlin, vendored as source under
+`tool/.../code/`, no Gradle dependency and no Android APIs (passes the plugin
+guardrails; see "What I'm allowed to use"):
+- `QrEncoder.kt` — a trimmed MIT-licensed port of Nayuki's QR generator (byte mode,
+  auto version + ECC boost, full mask selection). Emits a `CodeGeometry.QrMatrix`.
+- `Barcode1DEncoders.kt` — the five 1D symbologies, each producing a
+  `CodeGeometry.BarPattern` (run-length bar/space widths). GS1 for EAN/UPC, ISO/IEC
+  15417 for Code 128, ISO/IEC 16388 for Code 39 and ITF.
+- `CodeGeometry.kt` is the drawable model; `CardCodeView.kt` scales it to fill the
+  screen on a Compose Canvas. Invalid input throws `Barcode1DEncoders.EncodeException`.
+
+Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder.
+The set is deliberately small for v1 and grows as real cards turn up types we don't
+yet handle.
+
+### Open technical risk — scanning 1D barcodes (UNRESOLVED)
+Rendering (above) is done; **reading** codes with the camera is still open. Re-check
+after each `/sync-upstream` in case the built-in scanner changes.
+- The built-in `LightQrCodeScanner` targets QR codes, but many loyalty/membership
+  cards use 1D barcodes (Code 128, UPC/EAN, Code 39). Unknown whether it decodes
+  those. If it doesn't, options: manual entry only for 1D cards, or an allow-list
+  request for a scanning library.
 - **Practical fallback for v1** — Manual entry (type the number + pick the code type)
-  needs neither camera nor a scanning library, so it can ship independent of the above.
-  Camera import and on-device rendering can follow once the two questions are settled.
+  needs neither camera nor a scanning library, so it ships independent of scanning.
+  Camera import can follow once this question is settled.
