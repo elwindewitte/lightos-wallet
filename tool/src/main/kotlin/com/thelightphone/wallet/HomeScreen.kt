@@ -65,6 +65,27 @@ class HomeScreenViewModel : LightViewModel<Unit>() {
         _recentNames.value = listOf(card.name) + _recentNames.value.filterNot { it == card.name }
     }
 
+    /**
+     * Rename the card currently named [oldName] to [newName], keeping the browse
+     * list sorted and recents pointing at the new name. No-op if the new name is
+     * blank or unchanged. Cards are identified by name for now (v1 seed names are
+     * unique); a stable id lands with local storage.
+     */
+    fun renameCard(oldName: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty() || trimmed == oldName) return
+        _cards.value = _cards.value
+            .map { if (it.name == oldName) it.copy(name = trimmed) else it }
+            .sortedBy { it.name.lowercase() }
+        _recentNames.value = _recentNames.value.map { if (it == oldName) trimmed else it }
+    }
+
+    /** Remove the card named [name] from the list and from recents. */
+    fun deleteCard(name: String) {
+        _cards.value = _cards.value.filterNot { it.name == name }
+        _recentNames.value = _recentNames.value.filterNot { it == name }
+    }
+
     // Consume the hardware back button to leave search mode instead of exiting.
     override fun onBackPressed(): Boolean =
         if (_mode.value == HomeMode.Search) {
@@ -96,7 +117,11 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
         val openCard: (LoyaltyCard) -> Unit = { card ->
             viewModel.recordOpened(card)
             viewModel.exitSearch()
-            navigateTo(screenFactory = { CardDetailScreen(it, card) })
+            navigateTo(
+                screenFactory = {
+                    CardDetailScreen(it, card, viewModel::renameCard, viewModel::deleteCard)
+                },
+            )
         }
 
         LightTheme(colors = themeColors) {

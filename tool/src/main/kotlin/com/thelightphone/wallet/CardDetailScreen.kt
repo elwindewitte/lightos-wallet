@@ -24,28 +24,50 @@ import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
-
-class CardDetailViewModel : LightViewModel<Unit>()
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Detail view for a single card. The header carries the card's name; the body
- * will hold the full-screen scannable code once barcode rendering is settled
- * (see CLAUDE.md "Open technical risks"). One screen serves every card — the
- * card is passed in via the constructor.
+ * Holds the card's current display name so the header updates live when the name
+ * is edited on this screen (before the change is reflected back in the list).
+ */
+class CardDetailViewModel(initialName: String) : LightViewModel<Unit>() {
+    private val _name = MutableStateFlow(initialName)
+    val name: StateFlow<String> = _name.asStateFlow()
+
+    fun setName(newName: String) {
+        _name.value = newName
+    }
+}
+
+/**
+ * Detail view for a single card. The header carries the card's name and a ⋯
+ * button opening the options menu (rename / delete); the body will hold the
+ * full-screen scannable code once barcode rendering is settled (see CLAUDE.md
+ * "Open technical risks"). One screen serves every card — the card is passed in
+ * via the constructor.
+ *
+ * List mutations are pushed straight back via [onRename] / [onDelete] (keyed by
+ * the card's current name) rather than returned as results, so they survive the
+ * hardware back button — which pops the screen without carrying a result.
  */
 class CardDetailScreen(
     sealedActivity: SealedLightActivity,
     private val card: LoyaltyCard,
+    private val onRename: (oldName: String, newName: String) -> Unit,
+    private val onDelete: (name: String) -> Unit,
 ) : LightScreen<Unit, CardDetailViewModel>(sealedActivity) {
 
     override val viewModelClass: Class<CardDetailViewModel>
         get() = CardDetailViewModel::class.java
 
-    override fun createViewModel() = CardDetailViewModel()
+    override fun createViewModel() = CardDetailViewModel(card.name)
 
     @Composable
     override fun Content() {
         val themeColors by LightThemeController.colors.collectAsState()
+        val name by viewModel.name.collectAsState()
 
         LightTheme(colors = themeColors) {
             Column(
@@ -58,7 +80,30 @@ class CardDetailScreen(
                         icon = LightIcons.BACK,
                         onClick = { goBack() },
                     ),
-                    center = LightTopBarCenter.Text(card.name),
+                    center = LightTopBarCenter.Text(name),
+                    rightButton = LightBarButton.LightIcon(
+                        icon = LightIcons.ELLIPSES,
+                        contentDescription = "More options",
+                        onClick = {
+                            val current = viewModel.name.value
+                            navigateTo(
+                                screenFactory = { CardOptionsScreen(it, current) },
+                                resultCallback = { option ->
+                                    when (option) {
+                                        is CardOption.Rename -> {
+                                            onRename(current, option.newName)
+                                            viewModel.setName(option.newName)
+                                        }
+
+                                        CardOption.Delete -> {
+                                            onDelete(current)
+                                            goBack()
+                                        }
+                                    }
+                                },
+                            )
+                        },
+                    ),
                     modifier = Modifier.padding(bottom = 1f.gridUnitsAsDp()),
                 )
 
