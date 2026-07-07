@@ -26,14 +26,24 @@ import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 
+/** Confirmation question for deleting a single named card. */
+fun deleteCardPrompt(name: String): String = "Delete “$name”?"
+
+/** Confirmation question for bulk-deleting [count] cards. */
+fun deleteCardsPrompt(count: Int): String =
+    if (count == 1) "Delete 1 card?" else "Delete $count cards?"
+
 /**
- * Confirmation step for deleting a card. Returns true only when the user taps
- * DELETE; backing out (CANCEL, the ⟵ button, or hardware back) returns false so
- * the card is left untouched. Deletion is irreversible, hence the explicit guard.
+ * Confirmation step for deleting one or more cards. The caller supplies the
+ * [prompt] question (see [deleteCardPrompt] / [deleteCardsPrompt]); this screen
+ * appends the irreversibility warning and the CANCEL / DELETE choice.
+ *
+ * Returns true only when the user taps DELETE; backing out (CANCEL, the ⟵ button,
+ * or hardware back) returns false so nothing is deleted.
  */
 class DeleteCardConfirmScreen(
     sealedActivity: SealedLightActivity,
-    private val cardName: String,
+    private val prompt: String,
 ) : SimpleLightScreen<Boolean>(sealedActivity) {
 
     @Composable
@@ -63,7 +73,7 @@ class DeleteCardConfirmScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     LightText(
-                        text = "Delete “$cardName”?\nThis can’t be undone.",
+                        text = "$prompt\nThis can’t be undone.",
                         variant = LightTextVariant.Copy,
                         align = TextAlign.Center,
                     )

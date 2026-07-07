@@ -78,7 +78,7 @@ class CardOptionsScreen(
                         name = "Delete",
                         onClick = {
                             navigateTo(
-                                screenFactory = { DeleteCardConfirmScreen(it, cardName) },
+                                screenFactory = { DeleteCardConfirmScreen(it, deleteCardPrompt(cardName)) },
                                 resultCallback = { confirmed -> if (confirmed) goBack(CardOption.Delete) },
                             )
                         },
