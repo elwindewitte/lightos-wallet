@@ -78,8 +78,16 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Build APK: `./gradlew :tool:assembleDebug` → `tool/build/outputs/apk/debug/tool-debug.apk`.
 - Validate: `./gradlew check` (runs the plugin's dependency/source guardrails).
 - Sideload: `adb install -r tool/build/outputs/apk/debug/tool-debug.apk`.
-- Full-fidelity testing (permissions, service binding) needs either LP3 hardware or
-  the LightOS emulator set up as a system app — see `docs/system_app/`.
+  **This only works against the LightOS emulator (AVD), not a real Light Phone III.**
+- **Installing on real LP3 hardware is currently BLOCKED.** There is no sideloading
+  path to a physical LP3 today — USB debugging / adb install onto the device is not
+  available. The Light team has announced they are building an option to install
+  tools onto the phone through the **Dashboard**, but it is not shipped yet. Until
+  it lands, real-hardware install is not possible; do the full dev loop on the
+  LightOS emulator instead. Source (2026): https://github.com/orgs/lightphone/discussions/70
+  Re-check this after each `/sync-upstream` in case Dashboard install has shipped.
+- Full-fidelity testing (permissions, service binding) therefore runs on the LightOS
+  emulator set up as a system app — see `docs/system_app/`.
 
 ### Supported code types & rendering (RESOLVED)
 Rendering is the core of this tool, and it is done — no allow-list change was needed.
