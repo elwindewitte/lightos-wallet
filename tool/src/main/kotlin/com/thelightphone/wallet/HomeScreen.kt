@@ -2,6 +2,7 @@ package com.thelightphone.wallet
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,10 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewModelScope
 import com.thelightphone.sdk.InitialScreen
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
+import com.thelightphone.sdk.buildDatabase
 import com.thelightphone.sdk.ui.LightBarButton
 import com.thelightphone.sdk.ui.LightBottomBar
 import com.thelightphone.sdk.ui.LightIcons
@@ -36,9 +40,14 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
 import com.thelightphone.wallet.code.CodeType
+import com.thelightphone.wallet.data.CardRepository
+import com.thelightphone.wallet.data.WalletDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * What the home screen is doing: browsing the list, searching within it, or
@@ -46,37 +55,26 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 enum class HomeMode { Browse, Search, Select }
 
-class HomeScreenViewModel : LightViewModel<Unit>() {
+class HomeScreenViewModel(private val repository: CardRepository) : LightViewModel<Unit>() {
 
-    // Seed cards for now; manual add / local storage come later. Each carries a
-    // sample code + symbology so the detail screen renders, spanning the render
-    // paths (1D barcodes and QR). Kept sorted alphabetically (case-insensitive).
-    private val _cards = MutableStateFlow(
-        listOf(
-            // Real card codes (verified renderable/scannable); Jumbo is a placeholder
-            // that keeps the ITF render path demoable until a real ITF card turns up.
-            LoyaltyCard("Gamma", "2616115044662", CodeType.EAN_13),
-            LoyaltyCard("Shell GO+", "70041804751219410", CodeType.CODE_128),
-            LoyaltyCard("Praxis Plus", "2742004106927", CodeType.QR),
-            LoyaltyCard("Albert Heijn", "2620694989726", CodeType.EAN_13),
-            LoyaltyCard("Bouwmaat", "9901315001", CodeType.CODE_39),
-            LoyaltyCard("Jumbo", "12345678", CodeType.ITF),
-        ).sortedBy { it.name.lowercase() },
-    )
-    val cards: StateFlow<List<LoyaltyCard>> = _cards.asStateFlow()
+    // The persisted card list, ordered by name in the query. The Room Flow re-emits
+    // on every add / rename / delete, so mutations below just write and let the list
+    // refresh itself — there is no in-memory copy to keep in sync.
+    val cards: StateFlow<List<LoyaltyCard>> =
+        repository.observeCards()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _mode = MutableStateFlow(HomeMode.Browse)
     val mode: StateFlow<HomeMode> = _mode.asStateFlow()
 
-    // Card names in most-recently-opened order. Drives the default ordering of
-    // search mode. In-memory for now; persistence lands with local storage.
-    private val _recentNames = MutableStateFlow<List<String>>(emptyList())
-    val recentNames: StateFlow<List<String>> = _recentNames.asStateFlow()
+    // Card ids in most-recently-opened order. Drives the default ordering of search
+    // mode. In-memory (per session) — recency isn't worth persisting for v1.
+    private val _recentIds = MutableStateFlow<List<Long>>(emptyList())
+    val recentIds: StateFlow<List<Long>> = _recentIds.asStateFlow()
 
-    // Names of cards ticked in Select mode. Keyed by name like the rest of the
-    // tool (v1 seed names are unique); a stable id lands with local storage.
-    private val _selectedNames = MutableStateFlow<Set<String>>(emptySet())
-    val selectedNames: StateFlow<Set<String>> = _selectedNames.asStateFlow()
+    // Ids of cards ticked in Select mode.
+    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
 
     fun enterSearch() {
         _mode.value = HomeMode.Search
@@ -87,56 +85,56 @@ class HomeScreenViewModel : LightViewModel<Unit>() {
     }
 
     fun enterSelect() {
-        _selectedNames.value = emptySet()
+        _selectedIds.value = emptySet()
         _mode.value = HomeMode.Select
     }
 
     fun exitSelect() {
-        _selectedNames.value = emptySet()
+        _selectedIds.value = emptySet()
         _mode.value = HomeMode.Browse
     }
 
     /** Tick or untick [card] in Select mode. */
     fun toggleSelected(card: LoyaltyCard) {
-        val name = card.name
-        _selectedNames.value =
-            if (name in _selectedNames.value) _selectedNames.value - name
-            else _selectedNames.value + name
+        val id = card.id
+        _selectedIds.value =
+            if (id in _selectedIds.value) _selectedIds.value - id
+            else _selectedIds.value + id
     }
 
     /** Delete every ticked card, then leave Select mode. No-op if none ticked. */
     fun deleteSelected() {
-        val names = _selectedNames.value
-        if (names.isEmpty()) return
-        _cards.value = _cards.value.filterNot { it.name in names }
-        _recentNames.value = _recentNames.value.filterNot { it in names }
+        val ids = _selectedIds.value
+        if (ids.isEmpty()) return
+        viewModelScope.launch { repository.deleteCards(ids.toList()) }
+        _recentIds.value = _recentIds.value.filterNot { it in ids }
         exitSelect()
     }
 
     /** Record that a card was opened so it bubbles to the top of recents. */
     fun recordOpened(card: LoyaltyCard) {
-        _recentNames.value = listOf(card.name) + _recentNames.value.filterNot { it == card.name }
+        _recentIds.value = listOf(card.id) + _recentIds.value.filterNot { it == card.id }
+    }
+
+    /** Add a scanned or manually entered card to storage. Ignores a blank name. */
+    fun addCard(name: String, code: String, codeType: CodeType) {
+        if (name.isBlank()) return
+        viewModelScope.launch { repository.addCard(name, code, codeType) }
     }
 
     /**
-     * Rename the card currently named [oldName] to [newName], keeping the browse
-     * list sorted and recents pointing at the new name. No-op if the new name is
-     * blank or unchanged. Cards are identified by name for now (v1 seed names are
-     * unique); a stable id lands with local storage.
+     * Rename the card with [id] to [newName]. The Room Flow re-emits the re-sorted
+     * list; recents are keyed by id so they need no update. A blank name is ignored
+     * by the repository.
      */
-    fun renameCard(oldName: String, newName: String) {
-        val trimmed = newName.trim()
-        if (trimmed.isEmpty() || trimmed == oldName) return
-        _cards.value = _cards.value
-            .map { if (it.name == oldName) it.copy(name = trimmed) else it }
-            .sortedBy { it.name.lowercase() }
-        _recentNames.value = _recentNames.value.map { if (it == oldName) trimmed else it }
+    fun renameCard(id: Long, newName: String) {
+        viewModelScope.launch { repository.renameCard(id, newName) }
     }
 
-    /** Remove the card named [name] from the list and from recents. */
-    fun deleteCard(name: String) {
-        _cards.value = _cards.value.filterNot { it.name == name }
-        _recentNames.value = _recentNames.value.filterNot { it == name }
+    /** Remove the card with [id] from storage and from recents. */
+    fun deleteCard(id: Long) {
+        viewModelScope.launch { repository.deleteCards(listOf(id)) }
+        _recentIds.value = _recentIds.value.filterNot { it == id }
     }
 
     // Consume the hardware back button to leave search / select mode rather than
@@ -161,22 +159,28 @@ class HomeScreenViewModel : LightViewModel<Unit>() {
 class HomeScreen(sealedActivity: SealedLightActivity) :
     LightScreen<Unit, HomeScreenViewModel>(sealedActivity) {
 
+    // Built once and shared process-wide; every screen in the add / edit flow that
+    // touches storage goes through this same repository.
+    private val repository = CardRepository.getInstance {
+        lightContext.buildDatabase(WalletDatabase::class.java, CardRepository.DATABASE_NAME)
+    }
+
     override val viewModelClass: Class<HomeScreenViewModel>
         get() = HomeScreenViewModel::class.java
 
-    override fun createViewModel() = HomeScreenViewModel()
+    override fun createViewModel() = HomeScreenViewModel(repository)
 
     @Composable
     override fun Content() {
         val mode by viewModel.mode.collectAsState()
         val cards by viewModel.cards.collectAsState()
-        val recentNames by viewModel.recentNames.collectAsState()
-        val selected by viewModel.selectedNames.collectAsState()
+        val recentIds by viewModel.recentIds.collectAsState()
+        val selected by viewModel.selectedIds.collectAsState()
         val themeColors by LightThemeController.colors.collectAsState()
 
         // Confirm before bulk-deleting the ticked cards; delete on confirmation.
         val confirmDeleteSelected: () -> Unit = {
-            val count = viewModel.selectedNames.value.size
+            val count = viewModel.selectedIds.value.size
             if (count > 0) {
                 navigateTo(
                     screenFactory = { DeleteCardConfirmScreen(it, deleteCardsPrompt(count)) },
@@ -197,18 +201,37 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
             )
         }
 
+        // Add a card by scanning it (auto-detecting the symbology), then naming it;
+        // the scanner is popped before the name screen is pushed, per the SDK's
+        // camera-scanner guidance. The scanner offers a manual-entry fallback that
+        // resolves to the same ScannedCode, so both routes converge here.
+        val startAdd: () -> Unit = {
+            navigateTo(
+                screenFactory = { ScanCardScreen(it) },
+                resultCallback = { scanned ->
+                    navigateTo(
+                        screenFactory = { NameCardScreen(it) },
+                        resultCallback = { name ->
+                            viewModel.addCard(name, scanned.code, scanned.codeType)
+                        },
+                    )
+                },
+            )
+        }
+
         LightTheme(colors = themeColors) {
             when (mode) {
                 HomeMode.Browse -> BrowseContent(
                     cards = cards,
                     onSearch = viewModel::enterSearch,
                     onEdit = viewModel::enterSelect,
+                    onAdd = startAdd,
                     onOpen = openCard,
                 )
 
                 HomeMode.Search -> SearchContent(
                     cards = cards,
-                    recentNames = recentNames,
+                    recentIds = recentIds,
                     onClose = viewModel::exitSearch,
                     onOpen = openCard,
                 )
@@ -230,6 +253,7 @@ private fun BrowseContent(
     cards: List<LoyaltyCard>,
     onSearch: () -> Unit,
     onEdit: () -> Unit,
+    onAdd: () -> Unit,
     onOpen: (LoyaltyCard) -> Unit,
 ) {
     Column(
@@ -242,23 +266,40 @@ private fun BrowseContent(
             modifier = Modifier.padding(bottom = 1f.gridUnitsAsDp()),
         )
 
-        LightScrollView(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(start = 1f.gridUnitsAsDp()),
-        ) {
-            cards.forEach { card ->
-                CardRow(name = card.name, onClick = { onOpen(card) })
+        if (cards.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 1f.gridUnitsAsDp()),
+                contentAlignment = Alignment.Center,
+            ) {
+                LightText(
+                    text = "No cards yet.\nTap + to add one.",
+                    variant = LightTextVariant.Copy,
+                    align = TextAlign.Center,
+                    lighten = true,
+                )
+            }
+        } else {
+            LightScrollView(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = 1f.gridUnitsAsDp()),
+            ) {
+                cards.forEach { card ->
+                    CardRow(name = card.name, onClick = { onOpen(card) })
+                }
             }
         }
 
-        // Edit opens bulk-select-to-delete; ADD (the icon) is still a placeholder.
+        // Search, EDIT opens bulk-select-to-delete, ADD starts the scan/manual flow.
         LightBottomBar(
             items = listOf(
                 LightBarButton.LightIcon(icon = LightIcons.SEARCH, onClick = onSearch),
                 LightBarButton.Text(text = "EDIT", onClick = onEdit),
-                LightBarButton.LightIcon(icon = LightIcons.ADD, onClick = {}),
+                LightBarButton.LightIcon(icon = LightIcons.ADD, onClick = onAdd),
             ),
         )
     }
@@ -272,7 +313,7 @@ private fun BrowseContent(
 @Composable
 private fun SelectContent(
     cards: List<LoyaltyCard>,
-    selected: Set<String>,
+    selected: Set<Long>,
     onToggle: (LoyaltyCard) -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -298,7 +339,7 @@ private fun SelectContent(
             cards.forEach { card ->
                 SelectableCardRow(
                     name = card.name,
-                    checked = card.name in selected,
+                    checked = card.id in selected,
                     onToggle = { onToggle(card) },
                 )
             }
