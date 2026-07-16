@@ -116,10 +116,11 @@ Re-verify the SDK fork edits noted below after each `/sync-upstream`.
   **Select** (bulk-delete). `onBackPressed()` consumes hardware back to leave
   Search/Select rather than exit the tool.
 - `CardDetailScreen` — opens one card and renders its code full-screen (see rendering).
-  The ⋯ button opens `CardOptionsScreen` (Edit / Delete). Edits are pushed back to the
-  list through `onRename(id, …)` / `onDelete(id)` callbacks (not screen results) so they
-  survive the hardware back button, which pops without a result.
-- Edit / delete: `CardOptionsScreen` → `EditCardNameScreen` (rename) or
+  A bottom bar carries two text buttons, **EDIT** and **DELETE**, each navigating
+  straight to its own screen. Edits are pushed back to the list through
+  `onRename(id, …)` / `onDelete(id)` callbacks (not screen results) so they survive the
+  hardware back button, which pops without a result.
+- Edit / delete: the detail screen's EDIT → `EditCardNameScreen` (rename) and DELETE →
   `DeleteCardConfirmScreen` (confirm). Bulk delete runs from Home's Select mode through
   the same confirm screen.
 - Add flow: `HomeScreen` ＋ → `ScanCardScreen` → `NameCardScreen` → save. The scanner is
