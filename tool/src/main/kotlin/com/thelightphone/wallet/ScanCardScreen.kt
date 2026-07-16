@@ -2,9 +2,7 @@ package com.thelightphone.wallet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.thelightphone.sdk.LightBarcodeScanner
 import com.thelightphone.sdk.SealedLightActivity
@@ -87,27 +86,29 @@ class ScanCardScreen(
         }
 
         LightTheme(colors = themeColors) {
-            Column(
+            // The scanner (camera + dimming scrim) fills the whole screen and the bottom
+            // bar overlays it, so the scrim bleeds behind the transparent bar instead of
+            // stopping at a solid strip above it.
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(LightThemeTokens.colors.background),
             ) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    LightBarcodeScanner(
-                        title = "Scan card",
-                        formats = WALLET_SCAN_FORMATS,
-                        onScanned = { value, format ->
-                            format.toCodeType()?.let { pendingScan = ScannedCode(value, it) }
-                        },
-                        onBack = { goBack() },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                LightBarcodeScanner(
+                    title = "Scan card",
+                    formats = WALLET_SCAN_FORMATS,
+                    onScanned = { value, format ->
+                        format.toCodeType()?.let { pendingScan = ScannedCode(value, it) }
+                    },
+                    onBack = { goBack() },
+                    modifier = Modifier.fillMaxSize(),
+                )
 
                 LightBottomBar(
                     items = listOf(
                         LightBarButton.Text(text = "ENTER MANUALLY", onClick = onEnterManually),
                     ),
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
