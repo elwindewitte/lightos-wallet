@@ -15,6 +15,7 @@ import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.ui.LightBarButton
+import com.thelightphone.sdk.ui.LightBottomBar
 import com.thelightphone.sdk.ui.LightIcons
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
@@ -40,11 +41,11 @@ class CardDetailViewModel(initialName: String) : LightViewModel<Unit>() {
 }
 
 /**
- * Detail view for a single card. The header carries the card's name and a ⋯
- * button opening the options menu (rename / delete); the body will hold the
- * full-screen scannable code once barcode rendering is settled (see CLAUDE.md
- * "Open technical risks"). One screen serves every card — the card is passed in
- * via the constructor.
+ * Detail view for a single card. The header carries the card's name, the body
+ * holds the full-screen scannable code, and a bottom bar offers the two things
+ * you can do to a card — EDIT (rename) and DELETE — each navigating straight to
+ * its own screen. One screen serves every card — the card is passed in via the
+ * constructor.
  *
  * List mutations are pushed straight back via [onRename] / [onDelete] (keyed by
  * the card's stable id) rather than returned as results, so they survive the
@@ -79,29 +80,6 @@ class CardDetailScreen(
                         onClick = { goBack() },
                     ),
                     center = LightTopBarCenter.Text(name),
-                    rightButton = LightBarButton.LightIcon(
-                        icon = LightIcons.ELLIPSES,
-                        contentDescription = "More options",
-                        onClick = {
-                            val current = viewModel.name.value
-                            navigateTo(
-                                screenFactory = { CardOptionsScreen(it, current) },
-                                resultCallback = { option ->
-                                    when (option) {
-                                        is CardOption.Rename -> {
-                                            onRename(card.id, option.newName)
-                                            viewModel.setName(option.newName)
-                                        }
-
-                                        CardOption.Delete -> {
-                                            onDelete(card.id)
-                                            goBack()
-                                        }
-                                    }
-                                },
-                            )
-                        },
-                    ),
                     modifier = Modifier.padding(bottom = 1f.gridUnitsAsDp()),
                 )
 
@@ -115,6 +93,41 @@ class CardDetailScreen(
                 ) {
                     CardCodeSurface(code = card.code, codeType = card.codeType)
                 }
+
+                // EDIT renames in place (header updates live via the VM); DELETE
+                // confirms, then removes the card and pops back to the list.
+                LightBottomBar(
+                    items = listOf(
+                        LightBarButton.Text(
+                            text = "EDIT",
+                            onClick = {
+                                navigateTo(
+                                    screenFactory = { EditCardNameScreen(it, viewModel.name.value) },
+                                    resultCallback = { newName ->
+                                        onRename(card.id, newName)
+                                        viewModel.setName(newName)
+                                    },
+                                )
+                            },
+                        ),
+                        LightBarButton.Text(
+                            text = "DELETE",
+                            onClick = {
+                                navigateTo(
+                                    screenFactory = {
+                                        DeleteCardConfirmScreen(it, deleteCardPrompt(viewModel.name.value))
+                                    },
+                                    resultCallback = { confirmed ->
+                                        if (confirmed) {
+                                            onDelete(card.id)
+                                            goBack()
+                                        }
+                                    },
+                                )
+                            },
+                        ),
+                    ),
+                )
             }
         }
     }
