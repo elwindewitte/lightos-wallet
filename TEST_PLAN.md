@@ -35,21 +35,25 @@ submission on its own, however well the app works.
 
 ## 1. Automated checks (a few minutes, run on your computer)
 
-- [ ] `./gradlew check` passes **without** extra flags. This is what CI and Light's build
+- [x] `./gradlew check` passes **without** extra flags. This is what CI and Light's build
       server run, and it includes the guardrail plugin and the encoder golden tests
       (`EncoderGoldenTest`).
-- [ ] The PR's **PR Check** on GitHub is green.
-- [ ] `./gradlew :tool:assembleRelease` builds. Release builds shrink the code; a crash
+- [x] The PR's **PR Check** on GitHub is green.
+- [x] `./gradlew :tool:assembleRelease` builds. Release builds shrink the code; a crash
       that only shows up in release usually means something got stripped.
+- [x] The release build also **runs**: install it on the emulator once (temporarily set the
+      emulator `serverPackage`, then `./gradlew :tool:installRelease
+      -DlightSdk.allowAltServerPackage=true`, then restore the toml). Add a card, restart
+      the tool and check the card is still there. Light's server builds this version.
 
 ## 2. Emulator setup (once per session)
 
-- [ ] Start the emulator **with the flag**:
+- [x] Start the emulator **with the flag**:
       `~/Library/Android/sdk/emulator/emulator -avd Light_Phone_3 -writable-system`
-- [ ] Pressing Home shows the black LightOS tool list (not the Android home screen).
-- [ ] LightOS **Settings → Allowed Tools** is **All Tools**.
-- [ ] Install the current code: `./scripts/install-emulator.sh`
-- [ ] Afterwards, `git status` shows `tool/lighttool.toml` unchanged.
+- [x] Pressing Home shows the black LightOS tool list (not the Android home screen).
+- [x] LightOS **Settings → Allowed Tools** is **All Tools**.
+- [x] Install the current code: `./scripts/install-emulator.sh`
+- [x] Afterwards, `git status` shows `tool/lighttool.toml` unchanged.
 
 ## 3. First launch & empty state
 
