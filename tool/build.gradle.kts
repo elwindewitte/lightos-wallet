@@ -266,3 +266,10 @@ tasks.register<UploadToolTask>("uploadTool") {
     timeoutSeconds.set(providers.gradleProperty("device.timeoutSeconds").map { it.toLong() }.orElse(60L))
     pollIntervalSeconds.set(2L)
 }
+
+// Room writes each database version's structure to tool/schemas/ (committed). LightOS's
+// buildDatabase() takes no hand-written migrations, so schema changes must use Room's
+// @AutoMigration, which compares these files. See CLAUDE.md › Storage.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}

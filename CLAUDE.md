@@ -118,6 +118,22 @@ so all tool code builds against the public SDK API. Keep it that way.
   `CardRepository` — a process singleton (`getInstance { … }`) that maps entity↔model and
   exposes `observeCards(): Flow<List<LoyaltyCard>>`. Follows the `examples/authenticator`
   pattern.
+- **Schema changes & migrations.** Each DB version's structure is exported to
+  `tool/schemas/com.thelightphone.wallet.data.WalletDatabase/<version>.json` (committed;
+  `exportSchema = true` + the `ksp { room.schemaLocation }` arg in `tool/build.gradle.kts`).
+  The SDK's `buildDatabase()` is `Room.databaseBuilder(...).build()` with no hook for
+  `addMigrations`/fallbacks, so **hand-written `Migration`s can't be registered — use Room
+  `@AutoMigration`**, which diffs these JSON files. An update that changes the schema
+  without a migration makes Room throw on open (the tool crashes; data stays on disk).
+  To change the schema:
+  1. Edit the entity, bump `version` in `@Database`, and add
+     `autoMigrations = [AutoMigration(from = N, to = N + 1)]` (with an `AutoMigrationSpec`
+     for renames/deletes, e.g. `@RenameColumn`, `@DeleteColumn`).
+  2. Build; Room writes `N+1.json`. Commit it next to the old one. Never edit or delete a
+     released version's JSON.
+  3. Test on the emulator: install the old release, add cards, install the new build over
+     it (TEST_PLAN § 9 "Survives an update"), and check the cards are intact.
+  4. Bump `versionCode` in `tool/lighttool.toml` as for any release.
 - Wiring: `HomeScreen` builds the repository once in a field via
   `lightContext.buildDatabase(WalletDatabase::class.java, CardRepository.DATABASE_NAME)`
   and passes it to `HomeScreenViewModel`, which surfaces the list with

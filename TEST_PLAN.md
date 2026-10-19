@@ -219,6 +219,8 @@ the list. Recents are now saved, so they survive a restart.
 - [x] **Data survives:** add 3 cards, force-stop the tool
       (`adb shell am force-stop io.github.elwindewitte.wallet`) and reopen. All 3 are still there.
 - [x] **Survives a reboot** of the emulator (started with `-writable-system`).
+- [x] **Database structure is recorded:** `tool/schemas/…/<version>.json` exists for the
+      current `@Database` version and is committed (needed for future auto-migrations).
 - [x] **Survives an update:** bump `versionCode`, reinstall over the top, and the cards
       are still there. (This is what users will see when you ship v1.0.1.) Afterwards, put the emulator back on
       the current version with `adb install -r -d <apk>`: Android refuses a downgrade
