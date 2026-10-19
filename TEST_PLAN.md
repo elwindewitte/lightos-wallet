@@ -141,8 +141,10 @@ Do this for at least one QR card and one 1D barcode card.
 - [x] **It scans:** a phone barcode app reads it straight off the emulator screen.
 - [x] Long Code 128 / Code 39 values (20+ characters) still scan; thin bars stay at
       least 1 pixel wide.
-- [ ] **Brightness:** on a real LP3, check the code scans in a dim room. (The tool
-      doesn't force maximum brightness — decide whether that's acceptable.)
+- [ ] **Brightness:** on a real LP3, check the code scans in a dim room. The tool **can't**
+      raise brightness itself: that needs the activity's window, which the SDK doesn't
+      expose and the guardrail blocks (`android.app.`, `LocalView`, Activity casts).
+      Only an SDK API from Light could add it.
 
 **Results 2026-10-19:** one card per type plus 25-character Code 128 and 20-character
 Code 39, added through the app and decoded from emulator screenshots with ZXing
@@ -152,9 +154,10 @@ Code 39).
 - *Fixed:* QR codes didn't decode. Centring put the code on a half pixel, so every module
   edge anti-aliased into grey seams. The origin is now pixel-snapped and dark runs are
   drawn as one rect; 0 grey pixels in any code now.
-- [ ] *Open:* white margins are below the symbology specs for some codes (QR top 2 modules
-  vs 4; EAN-13 6 vs 11/7; ITF 4 vs 10; short Code 128 8 vs 10). ZXing reads them all, but
-  strict till scanners might not.
+- [x] *Decided:* white margins stay as they are, although some are below the symbology
+  specs (QR top 2 modules vs 4; EAN-13 6 vs 11/7; ITF 4 vs 10; short Code 128 8 vs 10).
+  Bigger bars matter more on the small screen, and ZXing reads them all. If a till ever
+  refuses one, revisit this first.
 
 ## 7. Edit & delete
 
