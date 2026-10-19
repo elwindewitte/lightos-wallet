@@ -284,6 +284,9 @@ From CLAUDE.md's design constraints and Light's Tool Guidelines.
 
 - [ ] Everything above is ticked, or consciously accepted and written down.
 - [ ] Merge to `main`, then note the commit or tag you're submitting (e.g. tag `v1.0.0`).
+- [ ] Submission notes include the data disclosure: "The Wallet sends no data itself. The
+      SDK's camera scanner (Google ML Kit) sends anonymous usage statistics to Google when
+      online." (See § 10.) The description field is capped at 255 characters (#266).
 - [ ] Dashboard → Developer Account → Manage Custom Tools → Submit New Tool → submit a
       build with that git ref and a short changelog.
 - [ ] Download the signed APK from the Dashboard and re-run sections 3, 4, 6 and 9 on it.
