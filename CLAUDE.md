@@ -196,6 +196,13 @@ is deliberately small for v1 and grows as real cards turn up types we don't yet 
   (This replaced an earlier fork-only `LightBarcodeScanner` once upstream shipped the
   same capability.)
 
+### Fonts
+- LightOS's typeface is **Akkurat** (licensed). `sdk/ui/.../LightFont.kt` uses the LP3's
+  system Akkurat, else `res/font/akkuratll_*` bundled in the APK, else Android's default.
+  This repo bundles none, so **on the emulator the Wallet renders in Roboto** (bolder,
+  wider buttons) while Light's own emulator APKs (Authenticator, LightOS emulator) bundle
+  Akkurat. Not a bug — judge typography on real hardware. Never commit font files.
+
 ### Text input & the LP3 keyboard
 - Name / code entry uses the SDK `LightTextInputEditor` (`EditCardNameScreen`,
   `NameCardScreen`, `EnterCodeScreen`). Each **must** be a `LightScreen` (owning its own

@@ -188,7 +188,12 @@ From CLAUDE.md's design constraints and Light's Tool Guidelines.
 - [ ] No notifications, badges, or anything that pulls you back into the tool.
 - [ ] No analytics, tracking or ads, and no data leaves the device.
 - [ ] Text uses the SDK styles and spacing matches other LightOS tools (compare with
-      Authenticator and Weather on the emulator).
+      Authenticator and Weather). **Compare fonts on a real LP3 only:** LightOS uses
+      Akkurat, a licensed font. On the emulator the Wallet falls back to Android's default
+      font (Roboto), so its text, especially bottom-bar buttons, looks bolder and wider
+      than Authenticator, whose emulator build has Akkurat bundled. On an LP3, Akkurat is
+      a system font and the SDK picks it up automatically. Never add the font files to
+      this repo.
 - [ ] Every screen can be left with the hardware back key, and back never exits the
       tool unexpectedly.
 - [ ] Turn on dark/light theme in LightOS settings (if available) and check every
