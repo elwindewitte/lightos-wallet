@@ -51,3 +51,11 @@ bin/
 # Personal, machine-specific run scripts — never commit. A shared
 # .conductor/settings.toml (no absolute paths) is fine to commit.
 .conductor/settings.local.toml
+
+### Python (builder/) ###
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+### Signing keys ###
+/signer/keys/

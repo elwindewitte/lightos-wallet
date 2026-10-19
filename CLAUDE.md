@@ -58,10 +58,10 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
   `plugin/.../LightToolMetadata.kt`.
 - **Camera IS allowed** (`android.permission.CAMERA`, now declared in
-  `tool/lighttool.toml`). The SDK ships `LightQrCodeScanner` (QR only); this fork adds
-  `LightBarcodeScanner`, which scans a chosen set of `LightBarcodeFormat` (QR + 1D) and
-  reports the detected format. Both handle the permission flow. See "How the tool is
-  built › Camera scanning" for how the tool uses it.
+  `tool/lighttool.toml`). The SDK's `LightQrCodeScanner` handles the permission flow and,
+  given a `formats` list of `LightBarcodeFormats` constants, scans QR + 1D codes and
+  reports the detected format via `onScannedBarcode`. See "How the tool is built ›
+  Camera scanning" for how the tool uses it.
 - Runtime request: `rememberPermissionRequestLauncher(Manifest.permission.CAMERA)`
   then `.launch()`; check with `checkPermission(...)`.
 
@@ -77,15 +77,29 @@ Use the `lightContext` wrapper instead of a raw Context.
   `local.properties` (or env `GITHUB_ACTOR`/`GITHUB_TOKEN`).
 - Build APK: `./gradlew :tool:assembleDebug` → `tool/build/outputs/apk/debug/tool-debug.apk`.
 - Validate: `./gradlew check` (runs the plugin's dependency/source guardrails).
-- Sideload: `adb install -r tool/build/outputs/apk/debug/tool-debug.apk`.
+- **`serverPackage` stays `com.lightos` in git.** CI and Light's tool-library build server
+  use it as-is, and the plugin rejects anything else unless
+  `-DlightSdk.allowAltServerPackage=true` is passed. For the LightOS emulator, run
+  `./scripts/install-emulator.sh`: it swaps in `com.thelightphone.sdk.emulator`, runs
+  `:tool:installDebug` with the flag, and always restores the toml.
+- Emulator gotchas: boot with `emulator -avd Light_Phone_3 -writable-system` **every
+  time** (without it Android drops the LightOS emulator app, wiping its settings and
+  resetting Home), and set LightOS Settings → Allowed Tools → **All Tools**, otherwise
+  the Wallet is refused ("unable to request camera permission").
+- Pre-submission checklist: `TEST_PLAN.md`.
+- Mock data: `./scripts/load-mock-cards.sh` replaces every card on the emulator with the 10
+  fake Dutch loyalty cards in `scripts/mock-cards.sql` (all 7 code types except ITF, valid
+  check digits) and clears recents. Use it before manual testing or screenshots.
+- Sideload: `./scripts/install-emulator.sh` (see the `serverPackage` note below).
   **This only works against the LightOS emulator (AVD), not a real Light Phone III.**
-- **Installing on real LP3 hardware is currently BLOCKED.** There is no sideloading
-  path to a physical LP3 today — USB debugging / adb install onto the device is not
-  available. The Light team has announced they are building an option to install
-  tools onto the phone through the **Dashboard**, but it is not shipped yet. Until
-  it lands, real-hardware install is not possible; do the full dev loop on the
-  LightOS emulator instead. Source (2026): https://github.com/orgs/lightphone/discussions/70
-  Re-check this after each `/sync-upstream` in case Dashboard install has shipped.
+- **Installing on real LP3 hardware is currently BLOCKED.** USB debugging / adb install
+  onto the device is not available. Upstream now documents the intended path — the
+  on-device **Tool Manager** over Wi-Fi (Dashboard developer mode → upload the signing-key
+  fingerprint → upload the APK, or `./gradlew :tool:uploadTool -Pdevice.ip=… -Pdevice.token=…`)
+  — see `docs/sideloading/README.md`. But per that doc it is **not yet rolled out to
+  LightOS production builds** (as of 2026-08-25), so until it ships do the full dev loop
+  on the LightOS emulator. Source: https://github.com/orgs/lightphone/discussions/70
+  Re-check `docs/sideloading/` after each `/sync-upstream` in case it has shipped.
 - Full-fidelity testing (permissions, service binding) therefore runs on the LightOS
   emulator set up as a system app — see `docs/system_app/`.
 
@@ -93,16 +107,36 @@ Use the `lightContext` wrapper instead of a raw Context.
 
 Everything lives in `tool/src/main/kotlin/com/thelightphone/wallet/`, split into screens
 (top level), `data/` (Room persistence), and `code/` (code encoding + Canvas rendering).
-Re-verify the SDK fork edits noted below after each `/sync-upstream`.
+This fork carries **no SDK edits** — `sdk/`, `plugin/` and the build files match upstream,
+so all tool code builds against the public SDK API. Keep it that way.
 
 ### Storage — Room, one source of truth
 - `LoyaltyCard` (`LoyaltyCard.kt`) is the UI model: `id` (stable row id), `name`, `code`,
-  `codeType`. Rename / delete / selection key on `id`, so two cards may share a name.
+  `codeType`. Rename / delete / selection key on `id`. Names are unique (trimmed,
+  case-insensitive): `NameCardScreen` and `EditCardNameScreen` share `NameEditor.kt`, which
+  checks `CardRepository.isNameTaken` (DAO `nameExists`, `COLLATE NOCASE`, excluding the
+  card being renamed) and shows a `LightFullscreenModal` on a clash.
 - `data/`: `CardEntity` (`@Entity "cards"`), `CardDao` (`observeCards(): Flow`, plus
   `suspend` `insert` / `rename` / `deleteByIds`), `WalletDatabase` (`@Database`), and
   `CardRepository` — a process singleton (`getInstance { … }`) that maps entity↔model and
   exposes `observeCards(): Flow<List<LoyaltyCard>>`. Follows the `examples/authenticator`
   pattern.
+- **Schema changes & migrations.** Each DB version's structure is exported to
+  `tool/schemas/com.thelightphone.wallet.data.WalletDatabase/<version>.json` (committed;
+  `exportSchema = true` + the `ksp { room.schemaLocation }` arg in `tool/build.gradle.kts`).
+  The SDK's `buildDatabase()` is `Room.databaseBuilder(...).build()` with no hook for
+  `addMigrations`/fallbacks, so **hand-written `Migration`s can't be registered — use Room
+  `@AutoMigration`**, which diffs these JSON files. An update that changes the schema
+  without a migration makes Room throw on open (the tool crashes; data stays on disk).
+  To change the schema:
+  1. Edit the entity, bump `version` in `@Database`, and add
+     `autoMigrations = [AutoMigration(from = N, to = N + 1)]` (with an `AutoMigrationSpec`
+     for renames/deletes, e.g. `@RenameColumn`, `@DeleteColumn`).
+  2. Build; Room writes `N+1.json`. Commit it next to the old one. Never edit or delete a
+     released version's JSON.
+  3. Test on the emulator: install the old release, add cards, install the new build over
+     it (TEST_PLAN § 9 "Survives an update"), and check the cards are intact.
+  4. Bump `versionCode` in `tool/lighttool.toml` as for any release.
 - Wiring: `HomeScreen` builds the repository once in a field via
   `lightContext.buildDatabase(WalletDatabase::class.java, CardRepository.DATABASE_NAME)`
   and passes it to `HomeScreenViewModel`, which surfaces the list with
@@ -111,23 +145,37 @@ Re-verify the SDK fork edits noted below after each `/sync-upstream`.
   sync. No seed data — a fresh install starts empty (Browse shows an empty-state hint).
 
 ### Screens & navigation
-- `HomeScreen` (`@InitialScreen`) — the card list. One screen, three modes via the
-  `HomeMode` enum: **Browse** (list + Search / EDIT / ＋ bottom bar), **Search**, and
-  **Select** (bulk-delete). `onBackPressed()` consumes hardware back to leave
-  Search/Select rather than exit the tool.
+- `HomeScreen` (`@InitialScreen`) — the card list (Search / SELECT / ＋ bottom bar). With no
+  cards it shows a first-run empty state instead: a short centered explanation and a
+  bottom bar with a single text button, ADD (the Authenticator pattern).
+- `SearchScreen` (returns the tapped `LoyaltyCard`; Home opens it) and `SelectCardsScreen`
+  (bulk delete; returns the ids to delete after `DeleteCardConfirmScreen`) are **separate
+  screens, not modes of Home**. Reason: the SDK's hardware-back path
+  (`LightActivity.handleOnBackPressed` → its own `goBack()`) pops the back stack without
+  calling `LightViewModel.onBackPressed()`, and the guardrail blocks `androidx.activity`
+  (no `BackHandler`). So don't rely on `onBackPressed()` for in-screen modes — give each
+  "mode" its own screen and let the back stack handle it.
 - `CardDetailScreen` — opens one card and renders its code full-screen (see rendering).
-  A bottom bar carries two text buttons, **EDIT** and **DELETE**, each navigating
+  A bottom bar carries two text buttons, **RENAME** and **DELETE**, each navigating
   straight to its own screen. Edits are pushed back to the list through
   `onRename(id, …)` / `onDelete(id)` callbacks (not screen results) so they survive the
   hardware back button, which pops without a result.
-- Edit / delete: the detail screen's EDIT → `EditCardNameScreen` (rename) and DELETE →
+- Rename / delete: the detail screen's RENAME → `EditCardNameScreen` (title "Rename") and DELETE →
   `DeleteCardConfirmScreen` (confirm). Bulk delete runs from Home's Select mode through
   the same confirm screen.
-- Add flow: `HomeScreen` ＋ → `ScanCardScreen` → `NameCardScreen` → save. The scanner is
-  popped before the name screen is pushed (SDK camera guidance: `goBack` then the caller
-  `navigateTo`s). `ScanCardScreen`'s "Enter manually" fallback runs `EnterCodeScreen` →
-  `PickCodeTypeScreen` and converges on the same `NameCardScreen`; both routes yield a
-  `ScannedCode(code, codeType)`.
+- Add flow (camera): `HomeScreen` ＋ → `ScanCardScreen` → (scanner popped, per SDK camera
+  guidance) → Home pushes `NameCardScreen` → save.
+- Add flow (manual): `ScanCardScreen` "Enter manually" → `EnterCodeScreen` → NEXT pushes
+  `PickCodeTypeScreen(code)` → pick pushes `NameCardScreen`. Each step stays on the stack
+  so Back returns one step with input kept (`EnterCodeViewModel` holds the
+  `TextFieldState`); the finished `ScannedCode(code, codeType, name)` bubbles back up via
+  `goBack` and Home saves it directly because `name` is set.
+- Input checks (`code/CodeInput.kt`, plain Kotlin): `typesFor(value)` filters the type
+  picker to types that can encode the value; `check()` flags a full-length EAN/UPC with a
+  wrong check digit (shown with the SDK's `LightFullscreenModal`, LightOS's error pattern);
+  `normalize()` appends the EAN/UPC check digit and uppercases Code 39. Codes are stored
+  normalized (`HomeScreenViewModel.addCard`) and displayed normalized (`CardCodeView`), so
+  the printed number always matches the bars. Empty NEXT/SAVE does nothing.
 - Conventions: go forward with `navigateTo(screenFactory = { … }, resultCallback = { … })`;
   `goBack(result)` returns a value, while `goBack(null)` / `goBack()` delivers no result (a
   cancel) — a `resultCallback` only fires for a non-null result.
@@ -165,31 +213,44 @@ guardrails; see "What I'm allowed to use"):
 Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder. The set
 is deliberately small for v1 and grows as real cards turn up types we don't yet handle.
 
-### Camera scanning (SDK fork edit — re-verify after `/sync-upstream`)
+### Camera scanning
 - The tool cannot own the camera: the guardrail blocks `LocalContext`, and CameraX / ML
   Kit are `implementation`-only in `sdk/ui` (not on the tool's classpath). The camera
   lives in the SDK; the tool owns the *screen*.
-- This fork generalizes `sdk/ui/.../LightQrCodeScanner.kt` and adds a public
-  `LightBarcodeScanner` (+ a permission-wrapping twin in
-  `sdk/client/.../LightClientUiUtils.kt`). It scans a caller-chosen
-  `Set<LightBarcodeFormat>` and reports `(value, LightBarcodeFormat)`. ML Kit auto-detects
-  the symbology, so there is **no QR-vs-barcode prompt** — `ScanCardScreen` maps the
-  detected format straight to a `CodeType` and only enables the formats the tool can
-  render. The original QR-only `LightQrCodeScanner` is left intact (still used by the
-  examples), so this is an additive change.
+- `ScanCardScreen` uses the SDK's `LightQrCodeScanner` (`sdk/client/.../LightClientUiUtils.kt`,
+  wrapping `sdk/ui/.../LightCodeScanner.kt`) with `formats` = the `LightBarcodeFormats`
+  constants we can render, and reads results from `onScannedBarcode` (`LightScannedBarcode`:
+  `value`, `format` as an `Int`, `rawBytes`). Without `onScannedBarcode` it only reports QR.
+  ML Kit auto-detects the symbology, so there is **no QR-vs-barcode prompt** — the detected
+  format maps straight to a `CodeType`, and unrenderable formats are never enabled.
+  (This replaced an earlier fork-only `LightBarcodeScanner` once upstream shipped the
+  same capability.)
+
+### Fonts
+- LightOS's typeface is **Akkurat** (licensed). `sdk/ui/.../LightFont.kt` uses the LP3's
+  system Akkurat, else `res/font/akkuratll_*` bundled in the APK, else Android's default.
+  This repo bundles none, so **on the emulator the Wallet renders in Roboto** (bolder,
+  wider buttons) while Light's own emulator APKs (Authenticator, LightOS emulator) bundle
+  Akkurat. Not a bug — judge typography on real hardware. Never commit font files.
 
 ### Text input & the LP3 keyboard
 - Name / code entry uses the SDK `LightTextInputEditor` (`EditCardNameScreen`,
   `NameCardScreen`, `EnterCodeScreen`). Each **must** be a `LightScreen` (owning its own
   ViewModelStore) with a **distinct editor title** — the SDK caches the keyboard view
   model by title, so a shared title leaves later editors unresponsive.
-- Search uses the embedded keyboard directly (`SearchContent` + `SearchKeyboardCallback`);
-  its default order is most-recently-opened, with recents tracked in-memory by `id`.
+- Search uses the embedded keyboard directly (`SearchScreen` + `SearchKeyboardCallback`)
+  because `LightTextInputEditor` has no slot for live results between field and keyboard.
+  It builds an `EnQwertyLp3KeyboardViewModel` the same way `LightTextInputEditor` does
+  (copy that file when the keyboard library changes); `SearchKeyboardCallback` mirrors the
+  SDK's `internal` `TextInputKeyboardCallback`, except Return hides the keyboard (tap the
+  search field to show it again). Default order is most-recently-opened; recents are
+  ids persisted in the tool's DataStore (`data/RecentCardsStore.kt`, key
+  `recent_card_ids`) by `HomeScreenViewModel`.
 
 ### Barcodes — RESOLVED
 Both former open risks are closed. Codes are **rendered** by self-drawing on Canvas (see
 "Supported code types & rendering"), and 1D + QR codes are **scanned** with the camera via
-the fork's multi-format `LightBarcodeScanner` (see "Camera scanning") — this supersedes the
+the SDK's multi-format `LightQrCodeScanner` (see "Camera scanning") — this supersedes the
 earlier "scanning 1D barcodes unresolved" note. Manual entry (`EnterCodeScreen` →
 `PickCodeTypeScreen`) remains as a camera-free fallback. One thing to keep honest: ML Kit's
 `rawValue` must match what the `Barcode1DEncoders` expect so a scanned code re-renders

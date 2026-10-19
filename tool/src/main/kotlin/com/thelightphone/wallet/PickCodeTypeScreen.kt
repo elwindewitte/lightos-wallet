@@ -8,36 +8,73 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.SimpleLightScreen
 import com.thelightphone.sdk.ui.LightBarButton
+import com.thelightphone.sdk.ui.LightFullscreenModal
 import com.thelightphone.sdk.ui.LightIcons
 import com.thelightphone.sdk.ui.LightScrollView
+import com.thelightphone.sdk.ui.LightText
+import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
+import com.thelightphone.wallet.code.CodeInput
 import com.thelightphone.wallet.code.CodeType
 import com.thelightphone.wallet.code.displayLabel
 
 /**
- * Manual-entry step: pick the code's symbology. Reached after [EnterCodeScreen] when
- * the camera couldn't be used, so the type can't be auto-detected. Lists every
- * [CodeType] the tool can render; tapping one returns it via [goBack]. Backing out
- * returns nothing, cancelling manual entry.
+ * Manual-entry step: pick the code's symbology for [code]. Reached from
+ * [EnterCodeScreen] when the camera couldn't be used, so the type can't be
+ * auto-detected.
+ *
+ * Only lists the types that can actually encode [code] (see [CodeInput.typesFor]), so
+ * nothing unrenderable can be saved. Picking an EAN/UPC whose check digit doesn't
+ * match shows LightOS's full-screen message; closing it returns to the number.
+ * Otherwise it pushes the name step and returns the finished card via [goBack].
+ * Backing out returns to [EnterCodeScreen] with the number kept.
  */
 class PickCodeTypeScreen(
     sealedActivity: SealedLightActivity,
-) : SimpleLightScreen<CodeType>(sealedActivity) {
+    private val code: String,
+) : SimpleLightScreen<ScannedCode>(sealedActivity) {
+
+    private val types = CodeInput.typesFor(code)
+
+    private var error by mutableStateOf<String?>(null)
+
+    private fun pick(type: CodeType) {
+        when (val check = CodeInput.check(code, type)) {
+            is CodeInput.Check.WrongCheckDigit -> error =
+                "This number doesn’t look right. The last digit should be " +
+                    "${check.expected}, check the number on your card."
+
+            else -> navigateTo(
+                screenFactory = { NameCardScreen(it) },
+                resultCallback = { name ->
+                    goBack(ScannedCode(CodeInput.normalize(code, type), type, name))
+                },
+            )
+        }
+    }
 
     @Composable
     override fun Content() {
         val themeColors by LightThemeController.colors.collectAsState()
 
         LightTheme(colors = themeColors) {
+            val message = error
+            if (message != null) {
+                LightFullscreenModal(message = message, onClose = { goBack() })
+                return@LightTheme
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -58,8 +95,16 @@ class PickCodeTypeScreen(
                         .fillMaxWidth()
                         .padding(start = 1f.gridUnitsAsDp()),
                 ) {
-                    CodeType.entries.forEach { type ->
-                        CardRow(name = type.displayLabel, onClick = { goBack(type) })
+                    if (types.isEmpty()) {
+                        LightText(
+                            text = "No code type fits this number.",
+                            variant = LightTextVariant.Copy,
+                            lighten = true,
+                            modifier = Modifier.padding(vertical = 0.75f.gridUnitsAsDp()),
+                        )
+                    }
+                    types.forEach { type ->
+                        CardRow(name = type.displayLabel, onClick = { pick(type) })
                     }
                 }
             }

@@ -20,6 +20,10 @@ internal interface CardDao {
     @Insert
     suspend fun insert(card: CardEntity): Long
 
+    /** Whether a card other than [excludeId] already uses [name], ignoring case. */
+    @Query("SELECT EXISTS(SELECT 1 FROM cards WHERE name = :name COLLATE NOCASE AND id != :excludeId)")
+    suspend fun nameExists(name: String, excludeId: Long): Boolean
+
     @Query("UPDATE cards SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 

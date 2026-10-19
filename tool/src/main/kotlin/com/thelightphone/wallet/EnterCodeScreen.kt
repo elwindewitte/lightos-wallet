@@ -1,7 +1,7 @@
 package com.thelightphone.wallet
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,21 +15,25 @@ import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 
-class EnterCodeViewModel : LightViewModel<String>()
+class EnterCodeViewModel : LightViewModel<ScannedCode>() {
+    // Held here rather than in composition so the typed number is still there when
+    // the user comes back from the type picker.
+    val textState = TextFieldState()
+}
 
 /**
  * Manual-entry step: type the card's code value. Reached from [ScanCardScreen]'s
- * "Enter manually" fallback; followed by [PickCodeTypeScreen] to choose the symbology
- * and then the shared name step.
+ * "Enter manually" fallback. NEXT pushes [PickCodeTypeScreen] on top (this screen
+ * stays underneath, so Back from the type picker returns here with the number kept),
+ * which in turn pushes the name step. The finished card bubbles back up via [goBack].
  *
  * Like [EditCardNameScreen]/[NameCardScreen] this is a [LightScreen] with a distinct
  * editor title so the SDK's title-keyed keyboard VM doesn't collide with the other
- * editors. Returns the trimmed value via [goBack]; a blank value (or backing out)
- * returns null, cancelling manual entry.
+ * editors. NEXT with nothing typed does nothing; backing out cancels manual entry.
  */
 class EnterCodeScreen(
     sealedActivity: SealedLightActivity,
-) : LightScreen<String, EnterCodeViewModel>(sealedActivity) {
+) : LightScreen<ScannedCode, EnterCodeViewModel>(sealedActivity) {
 
     override val viewModelClass: Class<EnterCodeViewModel>
         get() = EnterCodeViewModel::class.java
@@ -38,19 +42,23 @@ class EnterCodeScreen(
 
     @Composable
     override fun Content() {
-        val textState = rememberTextFieldState()
         val themeColors by LightThemeController.colors.collectAsState()
         val keyboardOptionsFlow = rememberKeyboardOptions()
 
         LightTheme(colors = themeColors) {
             LightTextInputEditor(
                 title = "Card number",
-                state = textState,
+                state = viewModel.textState,
                 keyboardOptionsFlow = keyboardOptionsFlow,
                 submitLabel = "NEXT",
                 onSubmit = { result ->
                     val code = result.toString().trim()
-                    goBack(if (code.isEmpty()) null else code)
+                    if (code.isNotEmpty()) {
+                        navigateTo(
+                            screenFactory = { PickCodeTypeScreen(it, code) },
+                            resultCallback = { card -> goBack(card) },
+                        )
+                    }
                 },
                 onBack = { goBack(null) },
                 modifier = Modifier.background(LightThemeTokens.colors.background),
