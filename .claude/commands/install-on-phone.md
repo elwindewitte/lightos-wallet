@@ -69,7 +69,7 @@ Two environment facts for this Mac (from setup notes — verify before relying):
    The `-r` reinstalls over any existing copy so I can run this repeatedly. Confirm
    the output says `Success`. If it fails (e.g. a signature mismatch from a
    previously installed build), tell me plainly; the usual fix is to uninstall first
-   with `adb uninstall com.thelightphone.app` and install again — but ask me before
+   with `adb uninstall io.github.elwindewitte.wallet` and install again — but ask me before
    uninstalling, since that clears any cards already saved on the phone.
 
 6. **Tell me it worked.** Confirm the tool is installed and that I should find

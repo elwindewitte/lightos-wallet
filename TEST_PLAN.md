@@ -15,24 +15,21 @@ These come from Light's [Tool Guidelines](TOOL_GUIDELINES.md), [tool metadata ru
 and the "Submitting Your Tool" steps in upstream's README. Each one fails the
 submission on its own, however well the app works.
 
-- [ ] **Tool id is yours and final.** `tool/lighttool.toml` still has the template id
-      `com.thelightphone.app`, which is in Light's own namespace. Pick a permanent id
-      such as `nl.<yourname>.wallet`. **You can't change it after the tool is registered.**
+- [x] **Tool id is yours and final:** `io.github.elwindewitte.wallet` (based on your GitHub
+      account, so nobody else can claim it). **It can't change after the tool is registered.**
 - [ ] **The GitHub repo is public.** Light builds from a public commit, and the
       repo is currently **private**.
-- [ ] **`serverPackage = "com.lightos"`** in `tool/lighttool.toml` on the commit you
+- [x] **`serverPackage = "com.lightos"`** in `tool/lighttool.toml` on the commit you
       submit. CI enforces this.
-- [ ] **`versionCode` is higher than the last version you submitted** (start at `1`), and
+- [x] **`versionCode` is higher than the last version you submitted** (start at `1`), and
       `versionName` is strict `major.minor.patch`, e.g. `1.0.0`.
-- [ ] **Only the permissions you need.** The Wallet never uses the network, yet
-      `android.permission.INTERNET` is still listed (left over from the template).
-      Remove it unless you have a reason to keep it; a reviewer will ask about it.
-- [ ] **No leftover template code.** `ToolEntryPoint.kt` logs LightOS registration data
-      and push payloads. The Wallet doesn't use push, so trim it to the minimum.
+- [x] **Only the permissions you need.** `lighttool.toml` declares only `CAMERA`. (The
+      built app still lists `INTERNET` because SDK libraries — okhttp and the scanner's
+      Google library — add it; worth a line in your submission notes.)
+- [x] **No leftover template code.** `ToolEntryPoint.kt` is the bare required shell.
 - [ ] **Built on the latest Light SDK.** Run `/sync-upstream` shortly before submitting.
 - [ ] **At least one screenshot** ready for the Dashboard listing.
-- [ ] **Third-party code is credited.** `QrEncoder.kt` is a port of Nayuki's MIT-licensed
-      QR library; keep its license header.
+- [x] **Third-party code is credited.** `QrEncoder.kt` carries Nayuki's full MIT notice.
 
 ---
 
@@ -56,7 +53,7 @@ submission on its own, however well the app works.
 
 ## 3. First launch & empty state
 
-Start from a clean slate: `adb uninstall com.thelightphone.app` (or your new id), then
+Start from a clean slate: `adb uninstall io.github.elwindewitte.wallet`, then
 reinstall.
 
 - [ ] "Wallet" appears in the LightOS tool list and opens.
@@ -156,7 +153,7 @@ Do this for at least one QR card and one 1D barcode card.
 ## 9. Durability & real-world use
 
 - [ ] **Data survives:** add 3 cards, force-stop the tool
-      (`adb shell am force-stop <id>`) and reopen. All 3 are still there.
+      (`adb shell am force-stop io.github.elwindewitte.wallet`) and reopen. All 3 are still there.
 - [ ] **Survives a reboot** of the emulator (started with `-writable-system`).
 - [ ] **Survives an update:** bump `versionCode`, reinstall over the top, and the cards
       are still there. (This is what users will see when you ship v1.0.1.)

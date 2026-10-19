@@ -1,5 +1,5 @@
 [tool]
-id = "com.thelightphone.app"
+id = "io.github.elwindewitte.wallet"
 label = "Wallet"
 versionCode = 1
 versionName = "1.0.0"
