@@ -58,10 +58,10 @@ Use the `lightContext` wrapper instead of a raw Context.
 - Declared in `tool/lighttool.toml` `permissions = [...]`; allow-list is in
   `plugin/.../LightToolMetadata.kt`.
 - **Camera IS allowed** (`android.permission.CAMERA`, now declared in
-  `tool/lighttool.toml`). The SDK ships `LightQrCodeScanner` (QR only); this fork adds
-  `LightBarcodeScanner`, which scans a chosen set of `LightBarcodeFormat` (QR + 1D) and
-  reports the detected format. Both handle the permission flow. See "How the tool is
-  built › Camera scanning" for how the tool uses it.
+  `tool/lighttool.toml`). The SDK's `LightQrCodeScanner` handles the permission flow and,
+  given a `formats` list of `LightBarcodeFormats` constants, scans QR + 1D codes and
+  reports the detected format via `onScannedBarcode`. See "How the tool is built ›
+  Camera scanning" for how the tool uses it.
 - Runtime request: `rememberPermissionRequestLauncher(Manifest.permission.CAMERA)`
   then `.launch()`; check with `checkPermission(...)`.
 
@@ -77,15 +77,22 @@ Use the `lightContext` wrapper instead of a raw Context.
   `local.properties` (or env `GITHUB_ACTOR`/`GITHUB_TOKEN`).
 - Build APK: `./gradlew :tool:assembleDebug` → `tool/build/outputs/apk/debug/tool-debug.apk`.
 - Validate: `./gradlew check` (runs the plugin's dependency/source guardrails).
+- **Emulator build flag:** `tool/lighttool.toml` sets
+  `serverPackage = "com.thelightphone.sdk.emulator"`, and the plugin rejects any value
+  other than `com.lightos` unless every Gradle command gets
+  `-DlightSdk.allowAltServerPackage=true` (e.g.
+  `./gradlew :tool:check -DlightSdk.allowAltServerPackage=true`). For a real LP3, switch
+  to `com.lightos` and drop the flag.
 - Sideload: `adb install -r tool/build/outputs/apk/debug/tool-debug.apk`.
   **This only works against the LightOS emulator (AVD), not a real Light Phone III.**
-- **Installing on real LP3 hardware is currently BLOCKED.** There is no sideloading
-  path to a physical LP3 today — USB debugging / adb install onto the device is not
-  available. The Light team has announced they are building an option to install
-  tools onto the phone through the **Dashboard**, but it is not shipped yet. Until
-  it lands, real-hardware install is not possible; do the full dev loop on the
-  LightOS emulator instead. Source (2026): https://github.com/orgs/lightphone/discussions/70
-  Re-check this after each `/sync-upstream` in case Dashboard install has shipped.
+- **Installing on real LP3 hardware is currently BLOCKED.** USB debugging / adb install
+  onto the device is not available. Upstream now documents the intended path — the
+  on-device **Tool Manager** over Wi-Fi (Dashboard developer mode → upload the signing-key
+  fingerprint → upload the APK, or `./gradlew :tool:uploadTool -Pdevice.ip=… -Pdevice.token=…`)
+  — see `docs/sideloading/README.md`. But per that doc it is **not yet rolled out to
+  LightOS production builds** (as of 2026-08-25), so until it ships do the full dev loop
+  on the LightOS emulator. Source: https://github.com/orgs/lightphone/discussions/70
+  Re-check `docs/sideloading/` after each `/sync-upstream` in case it has shipped.
 - Full-fidelity testing (permissions, service binding) therefore runs on the LightOS
   emulator set up as a system app — see `docs/system_app/`.
 
@@ -93,7 +100,8 @@ Use the `lightContext` wrapper instead of a raw Context.
 
 Everything lives in `tool/src/main/kotlin/com/thelightphone/wallet/`, split into screens
 (top level), `data/` (Room persistence), and `code/` (code encoding + Canvas rendering).
-Re-verify the SDK fork edits noted below after each `/sync-upstream`.
+This fork carries **no SDK edits** — `sdk/`, `plugin/` and the build files match upstream,
+so all tool code builds against the public SDK API. Keep it that way.
 
 ### Storage — Room, one source of truth
 - `LoyaltyCard` (`LoyaltyCard.kt`) is the UI model: `id` (stable row id), `name`, `code`,
@@ -165,31 +173,35 @@ guardrails; see "What I'm allowed to use"):
 Growing the set: add an enum case, a `CodeEncoder.encode` branch, and an encoder. The set
 is deliberately small for v1 and grows as real cards turn up types we don't yet handle.
 
-### Camera scanning (SDK fork edit — re-verify after `/sync-upstream`)
+### Camera scanning
 - The tool cannot own the camera: the guardrail blocks `LocalContext`, and CameraX / ML
   Kit are `implementation`-only in `sdk/ui` (not on the tool's classpath). The camera
   lives in the SDK; the tool owns the *screen*.
-- This fork generalizes `sdk/ui/.../LightQrCodeScanner.kt` and adds a public
-  `LightBarcodeScanner` (+ a permission-wrapping twin in
-  `sdk/client/.../LightClientUiUtils.kt`). It scans a caller-chosen
-  `Set<LightBarcodeFormat>` and reports `(value, LightBarcodeFormat)`. ML Kit auto-detects
-  the symbology, so there is **no QR-vs-barcode prompt** — `ScanCardScreen` maps the
-  detected format straight to a `CodeType` and only enables the formats the tool can
-  render. The original QR-only `LightQrCodeScanner` is left intact (still used by the
-  examples), so this is an additive change.
+- `ScanCardScreen` uses the SDK's `LightQrCodeScanner` (`sdk/client/.../LightClientUiUtils.kt`,
+  wrapping `sdk/ui/.../LightCodeScanner.kt`) with `formats` = the `LightBarcodeFormats`
+  constants we can render, and reads results from `onScannedBarcode` (`LightScannedBarcode`:
+  `value`, `format` as an `Int`, `rawBytes`). Without `onScannedBarcode` it only reports QR.
+  ML Kit auto-detects the symbology, so there is **no QR-vs-barcode prompt** — the detected
+  format maps straight to a `CodeType`, and unrenderable formats are never enabled.
+  (This replaced an earlier fork-only `LightBarcodeScanner` once upstream shipped the
+  same capability.)
 
 ### Text input & the LP3 keyboard
 - Name / code entry uses the SDK `LightTextInputEditor` (`EditCardNameScreen`,
   `NameCardScreen`, `EnterCodeScreen`). Each **must** be a `LightScreen` (owning its own
   ViewModelStore) with a **distinct editor title** — the SDK caches the keyboard view
   model by title, so a shared title leaves later editors unresponsive.
-- Search uses the embedded keyboard directly (`SearchContent` + `SearchKeyboardCallback`);
-  its default order is most-recently-opened, with recents tracked in-memory by `id`.
+- Search uses the embedded keyboard directly (`SearchContent` + `SearchKeyboardCallback`)
+  because `LightTextInputEditor` has no slot for live results between field and keyboard.
+  It builds an `EnQwertyLp3KeyboardViewModel` the same way `LightTextInputEditor` does
+  (copy that file when the keyboard library changes); `SearchKeyboardCallback` mirrors the
+  SDK's `internal` `TextInputKeyboardCallback`, minus Return. Default order is
+  most-recently-opened, with recents tracked in-memory by `id`.
 
 ### Barcodes — RESOLVED
 Both former open risks are closed. Codes are **rendered** by self-drawing on Canvas (see
 "Supported code types & rendering"), and 1D + QR codes are **scanned** with the camera via
-the fork's multi-format `LightBarcodeScanner` (see "Camera scanning") — this supersedes the
+the SDK's multi-format `LightQrCodeScanner` (see "Camera scanning") — this supersedes the
 earlier "scanning 1D barcodes unresolved" note. Manual entry (`EnterCodeScreen` →
 `PickCodeTypeScreen`) remains as a camera-free fallback. One thing to keep honest: ML Kit's
 `rawValue` must match what the `Barcode1DEncoders` expect so a scanned code re-renders

@@ -2,8 +2,10 @@
 id = "com.thelightphone.app"
 label = "Wallet"
 versionCode = 1
-versionName = "1.0"
+versionName = "1.0.0"
 permissions = ["android.permission.INTERNET", "android.permission.CAMERA"]
-# change if you run this on an LP3!
+capabilities = []
+# We run on the LightOS emulator, so build with -DlightSdk.allowAltServerPackage=true.
+# For a real LP3, swap to the commented line below.
 # serverPackage = "com.lightos"
 serverPackage = "com.thelightphone.sdk.emulator"

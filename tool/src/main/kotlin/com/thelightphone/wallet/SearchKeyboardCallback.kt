@@ -3,8 +3,8 @@ package com.thelightphone.wallet
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.ui.text.TextRange
-import com.thelightphone.lp3Keyboard.ui.Lp3RepeatableKeyboardCallback
 import com.thelightphone.lp3Keyboard.ui.SpecialKey
+import com.thelightphone.lp3Keyboard.ui.viewmodel.Lp3RepeatableKeyboardCallback
 
 /**
  * Feeds LP3 keyboard events into a [TextFieldState] so the search field updates
@@ -52,6 +52,8 @@ class SearchKeyboardCallback(
             deleteBeforeCursor(deleteWordCount(before))
         }
     }
+
+    override fun onSubmitWord(word: CharSequence) = insertAtCursor(word.toString())
 
     private fun insertCodePoint(code: Int) {
         insertAtCursor(buildString { appendCodePoint(code) })

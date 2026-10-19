@@ -12,11 +12,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.thelightphone.sdk.LightBarcodeScanner
+import com.thelightphone.sdk.LightQrCodeScanner
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.SimpleLightScreen
 import com.thelightphone.sdk.ui.LightBarButton
-import com.thelightphone.sdk.ui.LightBarcodeFormat
+import com.thelightphone.sdk.ui.LightBarcodeFormats
 import com.thelightphone.sdk.ui.LightBottomBar
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
@@ -32,31 +32,32 @@ data class ScannedCode(val code: String, val codeType: CodeType)
  * can't draw (UPC-E, Code 93, PDF417, …) are left out, so the scanner keeps looking
  * rather than capturing something we couldn't display back.
  */
-private val WALLET_SCAN_FORMATS = setOf(
-    LightBarcodeFormat.QR_CODE,
-    LightBarcodeFormat.CODE_128,
-    LightBarcodeFormat.EAN_13,
-    LightBarcodeFormat.EAN_8,
-    LightBarcodeFormat.UPC_A,
-    LightBarcodeFormat.CODE_39,
-    LightBarcodeFormat.ITF,
+private val WALLET_SCAN_FORMATS = listOf(
+    LightBarcodeFormats.QR,
+    LightBarcodeFormats.CODE_128,
+    LightBarcodeFormats.EAN_13,
+    LightBarcodeFormats.EAN_8,
+    LightBarcodeFormats.UPC_A,
+    LightBarcodeFormats.CODE_39,
+    LightBarcodeFormats.ITF,
 )
 
-private fun LightBarcodeFormat.toCodeType(): CodeType? = when (this) {
-    LightBarcodeFormat.QR_CODE -> CodeType.QR
-    LightBarcodeFormat.CODE_128 -> CodeType.CODE_128
-    LightBarcodeFormat.EAN_13 -> CodeType.EAN_13
-    LightBarcodeFormat.EAN_8 -> CodeType.EAN_8
-    LightBarcodeFormat.UPC_A -> CodeType.UPC_A
-    LightBarcodeFormat.CODE_39 -> CodeType.CODE_39
-    LightBarcodeFormat.ITF -> CodeType.ITF
+/** Maps a detected [LightBarcodeFormats] constant to the [CodeType] we render it as. */
+private fun codeTypeForFormat(format: Int): CodeType? = when (format) {
+    LightBarcodeFormats.QR -> CodeType.QR
+    LightBarcodeFormats.CODE_128 -> CodeType.CODE_128
+    LightBarcodeFormats.EAN_13 -> CodeType.EAN_13
+    LightBarcodeFormats.EAN_8 -> CodeType.EAN_8
+    LightBarcodeFormats.UPC_A -> CodeType.UPC_A
+    LightBarcodeFormats.CODE_39 -> CodeType.CODE_39
+    LightBarcodeFormats.ITF -> CodeType.ITF
     else -> null
 }
 
 /**
  * First step of adding a card: point the camera at the card's QR or barcode. The
  * built-in scanner auto-detects the symbology, so there's no "is this a QR or a
- * barcode?" prompt — the detected [LightBarcodeFormat] maps straight to a [CodeType].
+ * barcode?" prompt — the detected format maps straight to a [CodeType].
  *
  * Returns the captured [ScannedCode] via [goBack]; the caller then asks for a name
  * and saves. Backing out (top-bar or hardware back) returns nothing, cancelling the
@@ -94,11 +95,16 @@ class ScanCardScreen(
                     .fillMaxSize()
                     .background(LightThemeTokens.colors.background),
             ) {
-                LightBarcodeScanner(
+                LightQrCodeScanner(
                     title = "Scan card",
                     formats = WALLET_SCAN_FORMATS,
-                    onScanned = { value, format ->
-                        format.toCodeType()?.let { pendingScan = ScannedCode(value, it) }
+                    // onScanned only fires for QR when onScannedBarcode is unset; we use
+                    // the rich callback so every format reports its detected symbology.
+                    onScanned = {},
+                    onScannedBarcode = { scanned ->
+                        codeTypeForFormat(scanned.format)?.let {
+                            pendingScan = ScannedCode(scanned.value, it)
+                        }
                     },
                     onBack = { goBack() },
                     modifier = Modifier.fillMaxSize(),

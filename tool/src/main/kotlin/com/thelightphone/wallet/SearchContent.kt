@@ -29,16 +29,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.thelightphone.lp3Keyboard.ui.CapsLockedLayout
-import com.thelightphone.lp3Keyboard.ui.DefaultLp3KeyboardViewModel
-import com.thelightphone.lp3Keyboard.ui.EmojiLayout
-import com.thelightphone.lp3Keyboard.ui.ExtendedCharKeyboard
 import com.thelightphone.lp3Keyboard.ui.LayoutOptions
-import com.thelightphone.lp3Keyboard.ui.LowerCaseLayout
-import com.thelightphone.lp3Keyboard.ui.Lp3KeyboardViewModel
-import com.thelightphone.lp3Keyboard.ui.NumberLayout
-import com.thelightphone.lp3Keyboard.ui.SymbolsLayout
-import com.thelightphone.lp3Keyboard.ui.UpperCaseLayout
+import com.thelightphone.lp3Keyboard.ui.viewmodel.EnQwertyLp3KeyboardViewModel
+import com.thelightphone.lp3Keyboard.ui.viewmodel.Lp3KeyboardViewModel
 import com.thelightphone.sdk.rememberKeyboardOptions
 import com.thelightphone.sdk.ui.LightIcon
 import com.thelightphone.sdk.ui.LightIcons
@@ -73,19 +66,13 @@ fun SearchContent(
     val query = textState.text.toString().trim()
 
     val keyboardOptions = rememberKeyboardOptions()
-    val keyboard: Lp3KeyboardViewModel = remember(textState, keyboardOptions) {
-        DefaultLp3KeyboardViewModel(
+    val keyboard: Lp3KeyboardViewModel<*> = remember(textState, keyboardOptions) {
+        EnQwertyLp3KeyboardViewModel<Unit>(
             SearchKeyboardCallback(textState),
             keyboardOptionsFlow = keyboardOptions,
-            optionsForLayout = { layout ->
-                val showCloseButton = when (layout) {
-                    EmojiLayout, is ExtendedCharKeyboard -> true
-                    CapsLockedLayout, LowerCaseLayout, NumberLayout,
-                    SymbolsLayout, UpperCaseLayout,
-                    -> false
-                }
-                LayoutOptions(showCloseButton)
-            },
+            // Close button only on overlay layouts (emoji, extended chars), as in the
+            // SDK's own text editor.
+            optionsForLayout = { LayoutOptions(displayCloseButton = !it.isRootLayout) },
         )
     }
 
