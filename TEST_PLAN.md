@@ -161,17 +161,24 @@ Code 39).
 
 ## 7. Edit & delete
 
-- [ ] Card → RENAME → "Rename" shows the current name. Change it → SAVE → the new
+- [x] Card → RENAME → "Rename" shows the current name. Change it → SAVE → the new
       name shows on the card and in the list.
-- [ ] RENAME → hardware back: the name is unchanged.
-- [ ] Card → DELETE → "This can't be undone." → CANCEL: the card is still there.
-- [ ] Card → DELETE → DELETE: back on the list, and the card is gone.
-- [ ] **Two cards with the same name:** renaming or deleting one leaves the other
+- [x] RENAME → hardware back: the name is unchanged.
+- [x] Card → DELETE → "This can't be undone." → CANCEL: the card is still there.
+- [x] Card → DELETE → DELETE: back on the list, and the card is gone.
+- [x] **Two cards with the same name:** renaming or deleting one leaves the other
       untouched.
-- [ ] **Bulk delete:** list → SELECT → select mode. "Select to delete…" counts up
+- [x] **Bulk delete:** list → SELECT → select mode. "Select to delete…" counts up
       ("2 selected"). DELETE → confirm removes exactly those cards. CANCEL leaves
       everything.
-- [ ] Hardware back in select mode leaves select mode (it doesn't exit the tool).
+- [x] Hardware back in select mode leaves select mode (it doesn't exit the tool).
+
+**Results 2026-10-19** (scripted on the emulator, `.context/s7*.py`): rename shows the
+current name and updates the card and list; Back from RENAME keeps the old name; DELETE →
+CANCEL keeps the card; DELETE → DELETE removes it and returns to the list. Two cards named
+`dup`: renaming one left the other, and deleting one left the other with its own code.
+SELECT counts up ("2 selected"), CANCEL keeps everything, DELETE asks "Delete 2 cards?"
+and removes exactly those two.
 
 ## 8. Search
 
