@@ -216,19 +216,28 @@ the list. Recents are now saved, so they survive a restart.
 
 ## 9. Durability & real-world use
 
-- [ ] **Data survives:** add 3 cards, force-stop the tool
+- [x] **Data survives:** add 3 cards, force-stop the tool
       (`adb shell am force-stop io.github.elwindewitte.wallet`) and reopen. All 3 are still there.
-- [ ] **Survives a reboot** of the emulator (started with `-writable-system`).
-- [ ] **Survives an update:** bump `versionCode`, reinstall over the top, and the cards
-      are still there. (This is what users will see when you ship v1.0.1.)
-- [ ] **Many cards:** with 25+ cards the list scrolls, the scrollbar appears and the
+- [x] **Survives a reboot** of the emulator (started with `-writable-system`).
+- [x] **Survives an update:** bump `versionCode`, reinstall over the top, and the cards
+      are still there. (This is what users will see when you ship v1.0.1.) Afterwards, put the emulator back on
+      the current version with `adb install -r -d <apk>`: Android refuses a downgrade
+      otherwise, so the normal install script would fail.
+- [x] **Many cards:** with 25+ cards the list scrolls, the scrollbar appears and the
       last card can be reached and opened.
-- [ ] **Long names** (40+ characters) wrap or truncate cleanly in the list, on the
+- [x] **Long names** (40+ characters) wrap or truncate cleanly in the list, on the
       card title and in search.
-- [ ] **Airplane mode / no network:** everything still works. The tool is fully offline.
-- [ ] **Leaving and coming back:** press Home on a card, then reopen the tool. No crash,
+- [x] **Airplane mode / no network:** everything still works. The tool is fully offline.
+- [x] **Leaving and coming back:** press Home on a card, then reopen the tool. No crash,
       and it still shows the card or the list.
 - [ ] **In-store test (real LP3, once possible):** scan a real card at a real till.
+
+**Results 2026-10-19:** 28 cards (22 inserted with `sqlite3` via `run-as`). The list
+scrolls with a scrollbar and the last card can be opened. Long names wrap in the list and
+are cut off with "…" on the card's title bar (barcode unaffected). Cards and recents
+survived a force-stop, an emulator reboot, and installing versionCode 2 over 1. In
+airplane mode the list, a card, and adding a card all worked. Home on an open card, then
+reopening, returns to that card. No crashes in the log.
 
 ## 10. Design & guideline review (LightOS fit)
 
