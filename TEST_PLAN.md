@@ -65,7 +65,7 @@ Start from a clean slate: `adb uninstall io.github.elwindewitte.wallet`, then
 reinstall.
 
 - [x] "Wallet" appears in the LightOS tool list and opens.
-- [x] The empty list shows the first-run screen: "No cards yet." with a short explanation,
+- [x] The empty list shows the first-run screen: "No cards yet. Add your first one.",
       and a bottom bar with only **ADD**. Tapping ADD starts adding a card.
 - [x] No permission prompt appears until you try to scan.
 - [x] Once there's a card, the bottom bar shows Search, EDIT and ＋, and nothing overlaps.

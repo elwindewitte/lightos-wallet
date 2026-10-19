@@ -228,7 +228,7 @@ private fun EmptyContent(onAdd: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             LightText(
-                text = "No cards yet.\nAdd a loyalty card to show\nits barcode at the till.",
+                text = "No cards yet.\nAdd your first one.",
                 variant = LightTextVariant.Copy,
                 align = TextAlign.Center,
                 lighten = true,
