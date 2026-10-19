@@ -13,10 +13,11 @@ import com.thelightphone.lp3Keyboard.ui.viewmodel.Lp3RepeatableKeyboardCallback
  * The SDK ships an equivalent (`TextInputKeyboardCallback`) but it's `internal`
  * to `sdk/ui`, so it can't be reused from the tool module — this mirrors its
  * logic. The one intentional difference: search is a single-line field, so the
- * Return key is ignored instead of inserting a newline.
+ * Return key hides the keyboard (via [onReturn]) instead of inserting a newline.
  */
 class SearchKeyboardCallback(
     private val state: TextFieldState,
+    private val onReturn: () -> Unit,
 ) : Lp3RepeatableKeyboardCallback {
 
     override fun onKeyPressed(code: Int) = Unit
@@ -37,7 +38,9 @@ class SearchKeyboardCallback(
                 val before = state.text.subSequence(0, state.selection.min)
                 deleteBeforeCursor(surrogateAwareDeleteCount(before, 1))
             }
-            // Single-line search field: swallow Return rather than inserting "\n".
+            // Single-line search field: Return hides the keyboard instead of
+            // inserting "\n", giving the results the whole screen.
+            SpecialKey.Return -> onReturn()
             else -> Unit
         }
     }

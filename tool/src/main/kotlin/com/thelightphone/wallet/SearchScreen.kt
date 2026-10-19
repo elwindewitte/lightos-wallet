@@ -93,11 +93,14 @@ private fun SearchContent(
 ) {
     val textState = rememberTextFieldState()
     val query = textState.text.toString().trim()
+    // Return hides the keyboard so the results get the whole screen; tapping the
+    // search field brings it back.
+    var keyboardVisible by remember { mutableStateOf(true) }
 
     val keyboardOptions = rememberKeyboardOptions()
     val keyboard: Lp3KeyboardViewModel<*> = remember(textState, keyboardOptions) {
         EnQwertyLp3KeyboardViewModel<Unit>(
-            SearchKeyboardCallback(textState),
+            SearchKeyboardCallback(textState, onReturn = { keyboardVisible = false }),
             keyboardOptionsFlow = keyboardOptions,
             // Close button only on overlay layouts (emoji, extended chars), as in the
             // SDK's own text editor.
@@ -126,7 +129,11 @@ private fun SearchContent(
             .fillMaxSize()
             .background(LightThemeTokens.colors.background),
     ) {
-        SearchTopBar(state = textState, onClose = onClose)
+        SearchTopBar(
+            state = textState,
+            onFieldClick = { keyboardVisible = true },
+            onClose = onClose,
+        )
 
         Spacer(modifier = Modifier.height(1f.gridUnitsAsDp()))
 
@@ -150,12 +157,12 @@ private fun SearchContent(
             }
         }
 
-        LightEmbeddedLp3Keyboard(viewModel = keyboard)
+        if (keyboardVisible) LightEmbeddedLp3Keyboard(viewModel = keyboard)
     }
 }
 
 @Composable
-private fun SearchTopBar(state: TextFieldState, onClose: () -> Unit) {
+private fun SearchTopBar(state: TextFieldState, onFieldClick: () -> Unit, onClose: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -163,7 +170,12 @@ private fun SearchTopBar(state: TextFieldState, onClose: () -> Unit) {
             .padding(horizontal = 1f.gridUnitsAsDp()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SearchInputField(state = state, modifier = Modifier.weight(1f))
+        SearchInputField(
+            state = state,
+            modifier = Modifier
+                .weight(1f)
+                .lightClickable(onClick = onFieldClick),
+        )
 
         Spacer(modifier = Modifier.width(1f.gridUnitsAsDp()))
 

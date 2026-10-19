@@ -34,6 +34,7 @@ import com.thelightphone.sdk.ui.lightClickable
 import com.thelightphone.wallet.code.CodeInput
 import com.thelightphone.wallet.code.CodeType
 import com.thelightphone.wallet.data.CardRepository
+import com.thelightphone.wallet.data.RecentCardsStore
 import com.thelightphone.wallet.data.WalletDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,7 +43,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HomeScreenViewModel(private val repository: CardRepository) : LightViewModel<Unit>() {
+class HomeScreenViewModel(
+    private val repository: CardRepository,
+    private val recents: RecentCardsStore,
+) : LightViewModel<Unit>() {
 
     // The persisted card list, ordered by name in the query. The Room Flow re-emits
     // on every add / rename / delete, so mutations below just write and let the list
@@ -52,20 +56,32 @@ class HomeScreenViewModel(private val repository: CardRepository) : LightViewMod
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // Card ids in most-recently-opened order. Drives the default ordering of
-    // search. In-memory (per session) — recency isn't worth persisting for v1.
+    // search. Persisted in DataStore so the recents survive a restart.
     private val _recentIds = MutableStateFlow<List<Long>>(emptyList())
     val recentIds: StateFlow<List<Long>> = _recentIds.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            // Merge rather than overwrite, in case a card was opened before this loaded.
+            _recentIds.value = (_recentIds.value + recents.load()).distinct()
+        }
+    }
+
+    private fun setRecents(ids: List<Long>) {
+        _recentIds.value = ids
+        viewModelScope.launch { recents.save(ids) }
+    }
 
     /** Delete the cards with [ids] (from bulk select) and drop them from recents. */
     fun deleteCards(ids: Set<Long>) {
         if (ids.isEmpty()) return
         viewModelScope.launch { repository.deleteCards(ids.toList()) }
-        _recentIds.value = _recentIds.value.filterNot { it in ids }
+        setRecents(_recentIds.value.filterNot { it in ids })
     }
 
     /** Record that a card was opened so it bubbles to the top of recents. */
     fun recordOpened(card: LoyaltyCard) {
-        _recentIds.value = listOf(card.id) + _recentIds.value.filterNot { it == card.id }
+        setRecents(listOf(card.id) + _recentIds.value.filterNot { it == card.id })
     }
 
     /**
@@ -104,7 +120,8 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     override val viewModelClass: Class<HomeScreenViewModel>
         get() = HomeScreenViewModel::class.java
 
-    override fun createViewModel() = HomeScreenViewModel(repository)
+    override fun createViewModel() =
+        HomeScreenViewModel(repository, RecentCardsStore(lightContext.dataStore))
 
     @Composable
     override fun Content() {

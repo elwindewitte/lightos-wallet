@@ -195,11 +195,16 @@ and removes exactly those two.
 - [x] Matching ignores case ("SHELL" finds Shell).
 - [x] Gibberish shows "No cards found".
 - [x] Backspace deletes one character; **long-press** backspace deletes a word.
-- [x] Return doesn't add a new line.
+- [x] Return doesn't add a new line; it **hides the keyboard** so the results get the
+      whole screen. Tapping the search field brings the keyboard back.
 - [x] Emoji and accent keyboards show a close button; the main layouts don't.
 - [x] Tapping a result opens that card; back returns to the list.
 - [x] The ✕ and hardware back both leave search without exiting the tool.
 - [x] Recents: open card A, then B. Search with nothing typed shows B first, then A.
+- [x] Recents **survive a restart** (force-stop, reopen: same order). Stored in the tool's
+      DataStore.
+- [x] Emoji work in card names (e.g. `hlong 🔥`), and typing the emoji in Search finds
+      the card.
 
 **Results 2026-10-19** (scripted, `.context/s8.py`): empty search with no recents shows
 "Type to search your cards"; "ORS" finds Ors and orsx (case ignored); one backspace →
@@ -207,7 +212,7 @@ and removes exactly those two.
 "ab" adds no new line; emoji and accent (long-press e) keyboards show a close ˅, the main
 letters don't; a result opens the card and Back lands on the list; after opening Gitf,
 dup, hlong the empty search lists hlong, dup, Gitf; ✕ and hardware Back both return to
-the list. Recents are kept in memory only, so they reset when the tool restarts.
+the list. Recents are now saved, so they survive a restart.
 
 ## 9. Durability & real-world use
 

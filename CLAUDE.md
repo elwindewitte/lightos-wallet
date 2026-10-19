@@ -223,8 +223,10 @@ is deliberately small for v1 and grows as real cards turn up types we don't yet 
   because `LightTextInputEditor` has no slot for live results between field and keyboard.
   It builds an `EnQwertyLp3KeyboardViewModel` the same way `LightTextInputEditor` does
   (copy that file when the keyboard library changes); `SearchKeyboardCallback` mirrors the
-  SDK's `internal` `TextInputKeyboardCallback`, minus Return. Default order is
-  most-recently-opened, with recents tracked in-memory by `id`.
+  SDK's `internal` `TextInputKeyboardCallback`, except Return hides the keyboard (tap the
+  search field to show it again). Default order is most-recently-opened; recents are
+  ids persisted in the tool's DataStore (`data/RecentCardsStore.kt`, key
+  `recent_card_ids`) by `HomeScreenViewModel`.
 
 ### Barcodes — RESOLVED
 Both former open risks are closed. Codes are **rendered** by self-drawing on Canvas (see
