@@ -76,6 +76,10 @@ reinstall.
 
 ## 4. Add a card — camera scan
 
+> **Status 2026-10-19:** not yet run end to end. Scanning worked in earlier testing; the
+> all-types run needs the printed test sheet (`.context/testsheet/index.html`) and an
+> emulator started from Terminal so it can use the camera.
+
 You need a working emulator camera (the emulator uses your Mac's webcam; macOS must
 allow it). Show the codes on a second screen or on paper.
 
@@ -104,10 +108,10 @@ allow it). Show the codes on a second screen or on paper.
 
 ## 5. Add a card — manual entry
 
-- [ ] ＋ → ENTER MANUALLY → "Card number" opens with the keyboard.
-- [ ] Type a number → NEXT → "Code type" lists QR, Code 128, EAN-13, EAN-8, UPC-A,
+- [x] ＋ → ENTER MANUALLY → "Card number" opens with the keyboard.
+- [x] Type a number → NEXT → "Code type" lists QR, Code 128, EAN-13, EAN-8, UPC-A,
       Code 39 and ITF.
-- [ ] Pick a type → "Card name" → SAVE → the card appears in the list.
+- [x] Pick a type → "Card name" → SAVE → the card appears in the list.
 - [ ] Back at each step goes back exactly one step, and nothing is saved.
 - [ ] **Check digits:** EAN-13 with 12 digits renders with a 13th (check) digit; with
       13 digits it renders exactly as typed. Same for EAN-8 (7/8) and UPC-A (11/12).
@@ -116,8 +120,23 @@ allow it). Show the codes on a second screen or on paper.
       for ITF, or `é` for Code 39. Today the card saves and the detail screen shows only
       the number, with **no barcode**. Decide whether to block this at entry before
       submitting.
-- [ ] **Long input:** a 200-character QR value still renders and scans.
+- [x] **Long input:** a 200-character QR value still renders and scans.
 - [ ] **Empty input:** NEXT / SAVE with nothing typed doesn't create a broken card.
+
+**Findings 2026-10-19** (encoder probe + emulator):
+- Back on "Code type" returns to the **scanner**, not "Card number"; the typed number is lost.
+  Back on "Card name" returns to the list; the scanned/typed code is lost.
+- NEXT / SAVE with an empty field silently cancels (back to the scanner / list).
+- 13-digit EAN-13 (8-digit EAN-8, 12-digit UPC-A) with a **wrong check digit is accepted**
+  and drawn; tills will reject it.
+- 12 typed EAN-13 digits: the bars include the check digit, but the number printed under
+  them doesn't, so it won't match the physical card.
+- Invalid input for the chosen type (letters for EAN, odd-length ITF, `é` for Code 39,
+  QR > ~2,950 characters) saves a card that shows only the number, no code.
+- Code 39 lowercase: the bars are uppercase (correct) but the number below shows lowercase.
+- "Card number" opens on the letter keyboard; in 123 mode NEXT is hidden until you close
+  the number keys (SDK editor behaviour).
+- Card names don't start with a capital (the SDK editor has `initialCaps`, unused).
 
 ## 6. View a card (the core job)
 
