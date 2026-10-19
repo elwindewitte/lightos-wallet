@@ -109,7 +109,10 @@ so all tool code builds against the public SDK API. Keep it that way.
 
 ### Storage — Room, one source of truth
 - `LoyaltyCard` (`LoyaltyCard.kt`) is the UI model: `id` (stable row id), `name`, `code`,
-  `codeType`. Rename / delete / selection key on `id`, so two cards may share a name.
+  `codeType`. Rename / delete / selection key on `id`. Names are unique (trimmed,
+  case-insensitive): `NameCardScreen` and `EditCardNameScreen` share `NameEditor.kt`, which
+  checks `CardRepository.isNameTaken` (DAO `nameExists`, `COLLATE NOCASE`, excluding the
+  card being renamed) and shows a `LightFullscreenModal` on a clash.
 - `data/`: `CardEntity` (`@Entity "cards"`), `CardDao` (`observeCards(): Flow`, plus
   `suspend` `insert` / `rename` / `deleteByIds`), `WalletDatabase` (`@Database`), and
   `CardRepository` — a process singleton (`getInstance { … }`) that maps entity↔model and

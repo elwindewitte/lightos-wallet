@@ -24,6 +24,13 @@ class CardRepository private constructor(database: WalletDatabase) {
         dao.insert(CardEntity(name = name.trim(), code = code, codeType = codeType.name))
     }
 
+    /**
+     * Whether another card already has [name] (trimmed, case-insensitive). Pass the
+     * card being renamed as [excludingId] so keeping its own name isn't a clash.
+     */
+    suspend fun isNameTaken(name: String, excludingId: Long = NO_CARD): Boolean =
+        dao.nameExists(name.trim(), excludingId)
+
     /** Rename the card with [id]; a blank new name is ignored. */
     suspend fun renameCard(id: Long, newName: String) {
         val trimmed = newName.trim()
@@ -42,6 +49,9 @@ class CardRepository private constructor(database: WalletDatabase) {
 
     companion object {
         const val DATABASE_NAME = "wallet.db"
+
+        /** Matches no card (Room ids start at 1). */
+        const val NO_CARD = 0L
 
         @Volatile
         private var instance: CardRepository? = null

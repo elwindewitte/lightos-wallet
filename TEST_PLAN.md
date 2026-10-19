@@ -166,8 +166,12 @@ Code 39).
 - [x] RENAME → hardware back: the name is unchanged.
 - [x] Card → DELETE → "This can't be undone." → CANCEL: the card is still there.
 - [x] Card → DELETE → DELETE: back on the list, and the card is gone.
-- [x] **Two cards with the same name:** renaming or deleting one leaves the other
-      untouched.
+- [x] **Names are unique** (ignoring capitals and surrounding spaces). Adding or renaming
+      to a name another card has shows "A card called “…” already exists. Choose another
+      name." ✕ returns to the name with the typing kept. Renaming a card to its own name,
+      or only changing its capitals, is allowed.
+- [x] Cards are still keyed by id, so rename / delete only ever touch the card you opened
+      (tested before names were made unique: two `dup` cards stayed independent).
 - [x] **Bulk delete:** list → SELECT → select mode. "Select to delete…" counts up
       ("2 selected"). DELETE → confirm removes exactly those cards. CANCEL leaves
       everything.
@@ -177,6 +181,8 @@ Code 39).
 current name and updates the card and list; Back from RENAME keeps the old name; DELETE →
 CANCEL keeps the card; DELETE → DELETE removes it and returns to the list. Two cards named
 `dup`: renaming one left the other, and deleting one left the other with its own code.
+Duplicate names are now blocked (`ors` vs `Ors` on add, `dup` on rename; `gitf` → `Gitf`
+allowed).
 SELECT counts up ("2 selected"), CANCEL keeps everything, DELETE asks "Delete 2 cards?"
 and removes exactly those two.
 

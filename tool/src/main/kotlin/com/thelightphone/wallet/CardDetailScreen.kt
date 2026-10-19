@@ -102,7 +102,7 @@ class CardDetailScreen(
                             text = "RENAME",
                             onClick = {
                                 navigateTo(
-                                    screenFactory = { EditCardNameScreen(it, viewModel.name.value) },
+                                    screenFactory = { EditCardNameScreen(it, card.id, viewModel.name.value) },
                                     resultCallback = { newName ->
                                         onRename(card.id, newName)
                                         viewModel.setName(newName)

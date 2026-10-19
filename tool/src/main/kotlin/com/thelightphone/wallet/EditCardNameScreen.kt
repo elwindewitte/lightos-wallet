@@ -1,30 +1,23 @@
 package com.thelightphone.wallet
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import com.thelightphone.sdk.LightScreen
-import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
-import com.thelightphone.sdk.rememberKeyboardOptions
-import com.thelightphone.sdk.ui.LightTextInputEditor
-import com.thelightphone.sdk.ui.LightTheme
-import com.thelightphone.sdk.ui.LightThemeController
-import com.thelightphone.sdk.ui.LightThemeTokens
+import com.thelightphone.sdk.buildDatabase
+import com.thelightphone.wallet.data.CardRepository
+import com.thelightphone.wallet.data.WalletDatabase
 
-class EditCardNameViewModel : LightViewModel<String>()
+class EditCardNameViewModel(repository: CardRepository, initialName: String, cardId: Long) :
+    NameEditorViewModel(repository, initialName, excludingId = cardId)
 
 /**
  * Full-screen editor for a card's name, pre-filled with the current name. Backed
- * by the SDK's [LightTextInputEditor] (top bar + underlined input + LP3 keyboard),
- * the same component UI Demo > Text input uses.
+ * by the SDK's [LightTextInputEditor] via [NameEditorContent], which also blocks a
+ * name another card already uses (keeping this card's own name, or changing only its
+ * capitals, is fine).
  *
- * Returns the trimmed new name via [goBack]; returns null (delivering no result)
- * when the field is left blank or the user backs out, so an empty rename is
- * treated as a cancel and the card keeps its old name.
+ * Returns the trimmed new name via [goBack]; SAVE on a blank field does nothing, and
+ * backing out returns no result, so the card keeps its old name.
  *
  * This is a [LightScreen] (not a SimpleLightScreen) on purpose: LightTextInputEditor
  * caches its keyboard view model keyed by the editor title. A SimpleLightScreen has
@@ -35,33 +28,26 @@ class EditCardNameViewModel : LightViewModel<String>()
  */
 class EditCardNameScreen(
     sealedActivity: SealedLightActivity,
+    private val cardId: Long,
     private val initialName: String,
 ) : LightScreen<String, EditCardNameViewModel>(sealedActivity) {
+
+    private val repository = CardRepository.getInstance {
+        lightContext.buildDatabase(WalletDatabase::class.java, CardRepository.DATABASE_NAME)
+    }
 
     override val viewModelClass: Class<EditCardNameViewModel>
         get() = EditCardNameViewModel::class.java
 
-    override fun createViewModel() = EditCardNameViewModel()
+    override fun createViewModel() = EditCardNameViewModel(repository, initialName, cardId)
 
     @Composable
     override fun Content() {
-        val textState = rememberTextFieldState(initialName)
-        val themeColors by LightThemeController.colors.collectAsState()
-        val keyboardOptionsFlow = rememberKeyboardOptions()
-
-        LightTheme(colors = themeColors) {
-            LightTextInputEditor(
-                title = "Rename",
-                state = textState,
-                keyboardOptionsFlow = keyboardOptionsFlow,
-                submitLabel = "SAVE",
-                onSubmit = { result ->
-                    val name = result.toString().trim()
-                    if (name.isNotEmpty()) goBack(name)
-                },
-                onBack = { goBack(null) },
-                modifier = Modifier.background(LightThemeTokens.colors.background),
-            )
-        }
+        NameEditorContent(
+            title = "Rename",
+            viewModel = viewModel,
+            onSaved = { goBack(it) },
+            onBack = { goBack(null) },
+        )
     }
 }
