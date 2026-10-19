@@ -123,10 +123,16 @@ so all tool code builds against the public SDK API. Keep it that way.
   sync. No seed data — a fresh install starts empty (Browse shows an empty-state hint).
 
 ### Screens & navigation
-- `HomeScreen` (`@InitialScreen`) — the card list. One screen, three modes via the
-  `HomeMode` enum: **Browse** (list + Search / EDIT / ＋ bottom bar), **Search**, and
-  **Select** (bulk-delete). `onBackPressed()` consumes hardware back to leave
-  Search/Select rather than exit the tool.
+- `HomeScreen` (`@InitialScreen`) — the card list (Search / EDIT / ＋ bottom bar). With no
+  cards it shows a first-run empty state instead: no bottom bar, one large centered
+  ＋ ADD CARD target.
+- `SearchScreen` (returns the tapped `LoyaltyCard`; Home opens it) and `SelectCardsScreen`
+  (bulk delete; returns the ids to delete after `DeleteCardConfirmScreen`) are **separate
+  screens, not modes of Home**. Reason: the SDK's hardware-back path
+  (`LightActivity.handleOnBackPressed` → its own `goBack()`) pops the back stack without
+  calling `LightViewModel.onBackPressed()`, and the guardrail blocks `androidx.activity`
+  (no `BackHandler`). So don't rely on `onBackPressed()` for in-screen modes — give each
+  "mode" its own screen and let the back stack handle it.
 - `CardDetailScreen` — opens one card and renders its code full-screen (see rendering).
   A bottom bar carries two text buttons, **EDIT** and **DELETE**, each navigating
   straight to its own screen. Edits are pushed back to the list through
@@ -195,7 +201,7 @@ is deliberately small for v1 and grows as real cards turn up types we don't yet 
   `NameCardScreen`, `EnterCodeScreen`). Each **must** be a `LightScreen` (owning its own
   ViewModelStore) with a **distinct editor title** — the SDK caches the keyboard view
   model by title, so a shared title leaves later editors unresponsive.
-- Search uses the embedded keyboard directly (`SearchContent` + `SearchKeyboardCallback`)
+- Search uses the embedded keyboard directly (`SearchScreen` + `SearchKeyboardCallback`)
   because `LightTextInputEditor` has no slot for live results between field and keyboard.
   It builds an `EnQwertyLp3KeyboardViewModel` the same way `LightTextInputEditor` does
   (copy that file when the keyboard library changes); `SearchKeyboardCallback` mirrors the

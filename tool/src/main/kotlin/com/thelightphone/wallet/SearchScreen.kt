@@ -32,12 +32,16 @@ import androidx.compose.ui.unit.dp
 import com.thelightphone.lp3Keyboard.ui.LayoutOptions
 import com.thelightphone.lp3Keyboard.ui.viewmodel.EnQwertyLp3KeyboardViewModel
 import com.thelightphone.lp3Keyboard.ui.viewmodel.Lp3KeyboardViewModel
+import com.thelightphone.sdk.SealedLightActivity
+import com.thelightphone.sdk.SimpleLightScreen
 import com.thelightphone.sdk.rememberKeyboardOptions
 import com.thelightphone.sdk.ui.LightIcon
 import com.thelightphone.sdk.ui.LightIcons
 import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
 import com.thelightphone.sdk.ui.LightTextVariant
+import com.thelightphone.sdk.ui.LightTheme
+import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.designVerticalPxToSp
 import com.thelightphone.sdk.ui.gridUnitsAsDp
@@ -49,14 +53,39 @@ private const val SEARCH_ICON_SIZE_UNITS = 2f
 private const val CURSOR_WIDTH_DP = 2
 
 /**
- * Search mode: a left-aligned query field with a close button in the top bar, a
+ * Search: a left-aligned query field with a close button in the top bar, a
  * live-filtered card list, and the embedded LP3 keyboard pinned to the bottom.
  *
  * With no query, cards are ordered most-recently-opened first (then the rest,
  * alphabetically). As soon as the user types, the list filters to matching names.
+ *
+ * A screen of its own (not a mode of [HomeScreen]) so the SDK's back stack handles
+ * the hardware back key. Returns the tapped card via [goBack]; the caller opens it.
+ * Closing (✕ or back) returns nothing.
  */
+class SearchScreen(
+    sealedActivity: SealedLightActivity,
+    private val cards: List<LoyaltyCard>,
+    private val recentIds: List<Long>,
+) : SimpleLightScreen<LoyaltyCard>(sealedActivity) {
+
+    @Composable
+    override fun Content() {
+        val themeColors by LightThemeController.colors.collectAsState()
+
+        LightTheme(colors = themeColors) {
+            SearchContent(
+                cards = cards,
+                recentIds = recentIds,
+                onClose = { goBack() },
+                onOpen = { goBack(it) },
+            )
+        }
+    }
+}
+
 @Composable
-fun SearchContent(
+private fun SearchContent(
     cards: List<LoyaltyCard>,
     recentIds: List<Long>,
     onClose: () -> Unit,

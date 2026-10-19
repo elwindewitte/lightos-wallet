@@ -65,15 +65,14 @@ Start from a clean slate: `adb uninstall io.github.elwindewitte.wallet`, then
 reinstall.
 
 - [x] "Wallet" appears in the LightOS tool list and opens.
-- [x] The empty list shows "No cards yet. Tap + to add one."
+- [x] The empty list shows the first-run screen: a large centered ＋ ADD CARD and **no**
+      bottom bar. Tapping it starts adding a card.
 - [x] No permission prompt appears until you try to scan.
-- [x] The bottom bar shows Search, EDIT and ＋, and nothing overlaps.
-- [ ] **EDIT on an empty list** opens "Select to delete…" with nothing to select.
-      *Found 2026-10-19:* hide or disable EDIT (and Search?) while there are no cards.
-- [ ] **Hardware back in select mode** returns to the list.
-      *Found 2026-10-19:* it **exits the tool** instead. The SDK sends the hardware back key
-      straight to its back stack and never calls `onBackPressed()`, and the guardrail
-      blocks `androidx.activity` (so no `BackHandler`). Affects Search mode too.
+- [x] Once there's a card, the bottom bar shows Search, EDIT and ＋, and nothing overlaps.
+- [x] Deleting the last card brings the first-run screen back.
+- [x] **Hardware back from Search and from select mode** returns to the list (doesn't exit
+      the tool). *Fixed 2026-10-19 by making both their own screens.* (The LP3 has no
+      hardware back key, but the emulator does.)
 
 ## 4. Add a card — camera scan
 
