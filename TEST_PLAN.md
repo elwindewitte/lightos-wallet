@@ -68,7 +68,7 @@ reinstall.
 - [x] The empty list shows the first-run screen: "No cards yet. Add your first one.",
       and a bottom bar with only **ADD**. Tapping ADD starts adding a card.
 - [x] No permission prompt appears until you try to scan.
-- [x] Once there's a card, the bottom bar shows Search, EDIT and ＋, and nothing overlaps.
+- [x] Once there's a card, the bottom bar shows Search, SELECT and ＋, and nothing overlaps.
 - [x] Deleting the last card brings the first-run screen back.
 - [x] **Hardware back from Search and from select mode** returns to the list (doesn't exit
       the tool). *Fixed 2026-10-19 by making both their own screens.* (The LP3 has no
@@ -146,14 +146,14 @@ Do this for at least one QR card and one 1D barcode card.
 
 ## 7. Edit & delete
 
-- [ ] Card → EDIT → "Edit name" shows the current name. Change it → SAVE → the new
+- [ ] Card → RENAME → "Rename" shows the current name. Change it → SAVE → the new
       name shows on the card and in the list.
-- [ ] EDIT → hardware back: the name is unchanged.
+- [ ] RENAME → hardware back: the name is unchanged.
 - [ ] Card → DELETE → "This can't be undone." → CANCEL: the card is still there.
 - [ ] Card → DELETE → DELETE: back on the list, and the card is gone.
 - [ ] **Two cards with the same name:** renaming or deleting one leaves the other
       untouched.
-- [ ] **Bulk delete:** list → EDIT → select mode. "Select to delete…" counts up
+- [ ] **Bulk delete:** list → SELECT → select mode. "Select to delete…" counts up
       ("2 selected"). DELETE → confirm removes exactly those cards. CANCEL leaves
       everything.
 - [ ] Hardware back in select mode leaves select mode (it doesn't exit the tool).

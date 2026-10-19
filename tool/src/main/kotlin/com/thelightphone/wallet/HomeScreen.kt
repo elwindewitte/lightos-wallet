@@ -167,7 +167,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
                 BrowseContent(
                     cards = cards,
                     onSearch = startSearch,
-                    onEdit = startSelect,
+                    onSelect = startSelect,
                     onAdd = startAdd,
                     onOpen = openCard,
                 )
@@ -180,7 +180,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
 private fun BrowseContent(
     cards: List<LoyaltyCard>,
     onSearch: () -> Unit,
-    onEdit: () -> Unit,
+    onSelect: () -> Unit,
     onAdd: () -> Unit,
     onOpen: (LoyaltyCard) -> Unit,
 ) {
@@ -205,11 +205,11 @@ private fun BrowseContent(
             }
         }
 
-        // Search, EDIT opens bulk-select-to-delete, ADD starts the scan/manual flow.
+        // Search, SELECT opens bulk-select-to-delete, ADD starts the scan/manual flow.
         LightBottomBar(
             items = listOf(
                 LightBarButton.LightIcon(icon = LightIcons.SEARCH, onClick = onSearch),
-                LightBarButton.Text(text = "EDIT", onClick = onEdit),
+                LightBarButton.Text(text = "SELECT", onClick = onSelect),
                 LightBarButton.LightIcon(icon = LightIcons.ADD, onClick = onAdd),
             ),
         )
@@ -218,7 +218,7 @@ private fun BrowseContent(
 
 /**
  * First run: a short explanation and a single ADD in the bottom bar (the same
- * pattern as LightOS's Authenticator). Search and EDIT only appear once there are
+ * pattern as LightOS's Authenticator). Search and SELECT only appear once there are
  * cards to act on.
  */
 @Composable

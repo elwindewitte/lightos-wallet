@@ -123,7 +123,7 @@ so all tool code builds against the public SDK API. Keep it that way.
   sync. No seed data — a fresh install starts empty (Browse shows an empty-state hint).
 
 ### Screens & navigation
-- `HomeScreen` (`@InitialScreen`) — the card list (Search / EDIT / ＋ bottom bar). With no
+- `HomeScreen` (`@InitialScreen`) — the card list (Search / SELECT / ＋ bottom bar). With no
   cards it shows a first-run empty state instead: a short centered explanation and a
   bottom bar with a single text button, ADD (the Authenticator pattern).
 - `SearchScreen` (returns the tapped `LoyaltyCard`; Home opens it) and `SelectCardsScreen`
@@ -134,11 +134,11 @@ so all tool code builds against the public SDK API. Keep it that way.
   (no `BackHandler`). So don't rely on `onBackPressed()` for in-screen modes — give each
   "mode" its own screen and let the back stack handle it.
 - `CardDetailScreen` — opens one card and renders its code full-screen (see rendering).
-  A bottom bar carries two text buttons, **EDIT** and **DELETE**, each navigating
+  A bottom bar carries two text buttons, **RENAME** and **DELETE**, each navigating
   straight to its own screen. Edits are pushed back to the list through
   `onRename(id, …)` / `onDelete(id)` callbacks (not screen results) so they survive the
   hardware back button, which pops without a result.
-- Edit / delete: the detail screen's EDIT → `EditCardNameScreen` (rename) and DELETE →
+- Rename / delete: the detail screen's RENAME → `EditCardNameScreen` (title "Rename") and DELETE →
   `DeleteCardConfirmScreen` (confirm). Bulk delete runs from Home's Select mode through
   the same confirm screen.
 - Add flow (camera): `HomeScreen` ＋ → `ScanCardScreen` → (scanner popped, per SDK camera

@@ -51,7 +51,7 @@ class EditCardNameScreen(
 
         LightTheme(colors = themeColors) {
             LightTextInputEditor(
-                title = "Edit name",
+                title = "Rename",
                 state = textState,
                 keyboardOptionsFlow = keyboardOptionsFlow,
                 submitLabel = "SAVE",

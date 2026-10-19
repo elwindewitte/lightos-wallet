@@ -43,7 +43,7 @@ class CardDetailViewModel(initialName: String) : LightViewModel<Unit>() {
 /**
  * Detail view for a single card. The header carries the card's name, the body
  * holds the full-screen scannable code, and a bottom bar offers the two things
- * you can do to a card — EDIT (rename) and DELETE — each navigating straight to
+ * you can do to a card — RENAME and DELETE — each navigating straight to
  * its own screen. One screen serves every card — the card is passed in via the
  * constructor.
  *
@@ -94,12 +94,12 @@ class CardDetailScreen(
                     CardCodeSurface(code = card.code, codeType = card.codeType)
                 }
 
-                // EDIT renames in place (header updates live via the VM); DELETE
+                // RENAME renames in place (header updates live via the VM); DELETE
                 // confirms, then removes the card and pops back to the list.
                 LightBottomBar(
                     items = listOf(
                         LightBarButton.Text(
-                            text = "EDIT",
+                            text = "RENAME",
                             onClick = {
                                 navigateTo(
                                     screenFactory = { EditCardNameScreen(it, viewModel.name.value) },
