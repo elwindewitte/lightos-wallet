@@ -89,17 +89,26 @@ private fun QrCodeView(matrix: CodeGeometry.QrMatrix) {
         val moduleSize = floor(size.minDimension / matrix.size)
         if (moduleSize < 1f) return@Canvas
         val drawn = moduleSize * matrix.size
-        val originX = (size.width - drawn) / 2f
-        val originY = (size.height - drawn) / 2f
+        // Whole-pixel origin: centring can land on a half pixel, which anti-aliases
+        // every module edge into grey seams that scanners can't read through.
+        val originX = floor((size.width - drawn) / 2f)
+        val originY = floor((size.height - drawn) / 2f)
         for (y in 0 until matrix.size) {
-            for (x in 0 until matrix.size) {
-                if (matrix.isDark(x, y)) {
-                    drawRect(
-                        color = CODE_INK,
-                        topLeft = Offset(originX + x * moduleSize, originY + y * moduleSize),
-                        size = Size(moduleSize, moduleSize),
-                    )
+            // Draw each horizontal run of dark modules as one rect, so there are no
+            // internal edges to anti-alias.
+            var x = 0
+            while (x < matrix.size) {
+                if (!matrix.isDark(x, y)) {
+                    x++
+                    continue
                 }
+                val start = x
+                while (x < matrix.size && matrix.isDark(x, y)) x++
+                drawRect(
+                    color = CODE_INK,
+                    topLeft = Offset(originX + start * moduleSize, originY + y * moduleSize),
+                    size = Size((x - start) * moduleSize, moduleSize),
+                )
             }
         }
     }
@@ -118,7 +127,8 @@ private fun BarcodeView(pattern: CodeGeometry.BarPattern) {
         // Snap each module to a whole pixel for crisp edges; fall back to exact if the
         // code is so dense that a whole pixel per module would overflow the width.
         val moduleWidth = if (exact >= 1f) floor(exact) else exact
-        var x = (size.width - moduleWidth * total) / 2f
+        // Whole-pixel origin so bar edges don't anti-alias to grey (see QrCodeView).
+        var x = floor((size.width - moduleWidth * total) / 2f)
         var isBar = true
         for (run in pattern.runs) {
             val runWidth = run * moduleWidth

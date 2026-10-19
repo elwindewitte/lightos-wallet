@@ -133,16 +133,28 @@ allow it). Show the codes on a second screen or on paper.
 
 Do this for at least one QR card and one 1D barcode card.
 
-- [ ] The code fills the screen width, black on a white panel, with a white margin
+- [x] The code fills the screen width, black on a white panel, with a white margin
       (quiet zone) all around.
-- [ ] Bars and modules are crisp, with no blurry or grey edges (zoom the screenshot in).
-- [ ] The number is shown below the code.
-- [ ] Nothing (title, buttons) overlaps the code.
-- [ ] **It scans:** a phone barcode app reads it straight off the emulator screen.
-- [ ] Long Code 128 / Code 39 values (20+ characters) still scan; thin bars stay at
+- [x] Bars and modules are crisp, with no blurry or grey edges (zoom the screenshot in).
+- [x] The number is shown below the code.
+- [x] Nothing (title, buttons) overlaps the code.
+- [x] **It scans:** a phone barcode app reads it straight off the emulator screen.
+- [x] Long Code 128 / Code 39 values (20+ characters) still scan; thin bars stay at
       least 1 pixel wide.
 - [ ] **Brightness:** on a real LP3, check the code scans in a dim room. (The tool
       doesn't force maximum brightness — decide whether that's acceptable.)
+
+**Results 2026-10-19:** one card per type plus 25-character Code 128 and 20-character
+Code 39, added through the app and decoded from emulator screenshots with ZXing
+(`.context/zxing`, run with `java -cp 'zxing/*' com.google.zxing.client.j2se.CommandLineRunner <png>`).
+All 9 decode to exactly the entered value (after normalising). Thinnest bar: 2px (20-char
+Code 39).
+- *Fixed:* QR codes didn't decode. Centring put the code on a half pixel, so every module
+  edge anti-aliased into grey seams. The origin is now pixel-snapped and dark runs are
+  drawn as one rect; 0 grey pixels in any code now.
+- [ ] *Open:* white margins are below the symbology specs for some codes (QR top 2 modules
+  vs 4; EAN-13 6 vs 11/7; ITF 4 vs 10; short Code 128 8 vs 10). ZXing reads them all, but
+  strict till scanners might not.
 
 ## 7. Edit & delete
 
