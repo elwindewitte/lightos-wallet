@@ -141,11 +141,19 @@ so all tool code builds against the public SDK API. Keep it that way.
 - Edit / delete: the detail screen's EDIT → `EditCardNameScreen` (rename) and DELETE →
   `DeleteCardConfirmScreen` (confirm). Bulk delete runs from Home's Select mode through
   the same confirm screen.
-- Add flow: `HomeScreen` ＋ → `ScanCardScreen` → `NameCardScreen` → save. The scanner is
-  popped before the name screen is pushed (SDK camera guidance: `goBack` then the caller
-  `navigateTo`s). `ScanCardScreen`'s "Enter manually" fallback runs `EnterCodeScreen` →
-  `PickCodeTypeScreen` and converges on the same `NameCardScreen`; both routes yield a
-  `ScannedCode(code, codeType)`.
+- Add flow (camera): `HomeScreen` ＋ → `ScanCardScreen` → (scanner popped, per SDK camera
+  guidance) → Home pushes `NameCardScreen` → save.
+- Add flow (manual): `ScanCardScreen` "Enter manually" → `EnterCodeScreen` → NEXT pushes
+  `PickCodeTypeScreen(code)` → pick pushes `NameCardScreen`. Each step stays on the stack
+  so Back returns one step with input kept (`EnterCodeViewModel` holds the
+  `TextFieldState`); the finished `ScannedCode(code, codeType, name)` bubbles back up via
+  `goBack` and Home saves it directly because `name` is set.
+- Input checks (`code/CodeInput.kt`, plain Kotlin): `typesFor(value)` filters the type
+  picker to types that can encode the value; `check()` flags a full-length EAN/UPC with a
+  wrong check digit (shown with the SDK's `LightFullscreenModal`, LightOS's error pattern);
+  `normalize()` appends the EAN/UPC check digit and uppercases Code 39. Codes are stored
+  normalized (`HomeScreenViewModel.addCard`) and displayed normalized (`CardCodeView`), so
+  the printed number always matches the bars. Empty NEXT/SAVE does nothing.
 - Conventions: go forward with `navigateTo(screenFactory = { … }, resultCallback = { … })`;
   `goBack(result)` returns a value, while `goBack(null)` / `goBack()` delivers no result (a
   cancel) — a `resultCallback` only fires for a non-null result.

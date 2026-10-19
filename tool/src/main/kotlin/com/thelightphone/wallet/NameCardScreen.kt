@@ -50,7 +50,7 @@ class NameCardScreen(
                 submitLabel = "SAVE",
                 onSubmit = { result ->
                     val name = result.toString().trim()
-                    goBack(if (name.isEmpty()) null else name)
+                    if (name.isNotEmpty()) goBack(name)
                 },
                 onBack = { goBack(null) },
                 modifier = Modifier.background(LightThemeTokens.colors.background),

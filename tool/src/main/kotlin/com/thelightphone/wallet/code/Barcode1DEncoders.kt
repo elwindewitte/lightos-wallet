@@ -90,7 +90,7 @@ object Barcode1DEncoders {
         return d
     }
 
-    private fun eanCheckDigit(data: String, dataLen: Int): Char {
+    internal fun eanCheckDigit(data: String, dataLen: Int): Char {
         // Weight is 3 for the rightmost data digit and alternates leftward.
         var sum = 0
         for (i in 0 until dataLen) {

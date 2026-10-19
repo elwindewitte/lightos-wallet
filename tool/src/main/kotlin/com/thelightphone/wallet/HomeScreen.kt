@@ -31,6 +31,7 @@ import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
+import com.thelightphone.wallet.code.CodeInput
 import com.thelightphone.wallet.code.CodeType
 import com.thelightphone.wallet.data.CardRepository
 import com.thelightphone.wallet.data.WalletDatabase
@@ -67,10 +68,14 @@ class HomeScreenViewModel(private val repository: CardRepository) : LightViewMod
         _recentIds.value = listOf(card.id) + _recentIds.value.filterNot { it == card.id }
     }
 
-    /** Add a scanned or manually entered card to storage. Ignores a blank name. */
+    /**
+     * Add a scanned or manually entered card to storage, storing the code exactly as
+     * the barcode carries it (see [CodeInput.normalize]). Ignores a blank name.
+     */
     fun addCard(name: String, code: String, codeType: CodeType) {
         if (name.isBlank()) return
-        viewModelScope.launch { repository.addCard(name, code, codeType) }
+        val stored = CodeInput.normalize(code, codeType)
+        viewModelScope.launch { repository.addCard(name, stored, codeType) }
     }
 
     /**
@@ -125,12 +130,17 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
             navigateTo(
                 screenFactory = { ScanCardScreen(it) },
                 resultCallback = { scanned ->
-                    navigateTo(
-                        screenFactory = { NameCardScreen(it) },
-                        resultCallback = { name ->
-                            viewModel.addCard(name, scanned.code, scanned.codeType)
-                        },
-                    )
+                    val name = scanned.name
+                    if (name != null) {
+                        viewModel.addCard(name, scanned.code, scanned.codeType)
+                    } else {
+                        navigateTo(
+                            screenFactory = { NameCardScreen(it) },
+                            resultCallback = { newName ->
+                                viewModel.addCard(newName, scanned.code, scanned.codeType)
+                            },
+                        )
+                    }
                 },
             )
         }

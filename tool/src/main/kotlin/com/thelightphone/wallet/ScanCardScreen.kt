@@ -23,8 +23,12 @@ import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.wallet.code.CodeType
 
-/** A code captured by scanning or manual entry, ready to be named and saved. */
-data class ScannedCode(val code: String, val codeType: CodeType)
+/**
+ * A code captured by scanning or manual entry. [name] is already filled in when
+ * manual entry ran the name step itself; a camera scan leaves it null, and the
+ * caller asks for a name after the scanner has closed.
+ */
+data class ScannedCode(val code: String, val codeType: CodeType, val name: String? = null)
 
 /**
  * The symbologies we ask the camera to read — exactly the ones the tool can render,
@@ -77,12 +81,7 @@ class ScanCardScreen(
         val onEnterManually: () -> Unit = {
             navigateTo(
                 screenFactory = { EnterCodeScreen(it) },
-                resultCallback = { code ->
-                    navigateTo(
-                        screenFactory = { PickCodeTypeScreen(it) },
-                        resultCallback = { type -> goBack(ScannedCode(code, type)) },
-                    )
-                },
+                resultCallback = { card -> goBack(card) },
             )
         }
 

@@ -108,35 +108,26 @@ allow it). Show the codes on a second screen or on paper.
 
 ## 5. Add a card — manual entry
 
-- [x] ＋ → ENTER MANUALLY → "Card number" opens with the keyboard.
-- [x] Type a number → NEXT → "Code type" lists QR, Code 128, EAN-13, EAN-8, UPC-A,
-      Code 39 and ITF.
-- [x] Pick a type → "Card name" → SAVE → the card appears in the list.
-- [ ] Back at each step goes back exactly one step, and nothing is saved.
-- [ ] **Check digits:** EAN-13 with 12 digits renders with a 13th (check) digit; with
-      13 digits it renders exactly as typed. Same for EAN-8 (7/8) and UPC-A (11/12).
-- [ ] **Code 39:** lowercase input is shown and encoded as uppercase.
-- [ ] **Invalid input (known gap):** enter letters for EAN-13, an odd number of digits
-      for ITF, or `é` for Code 39. Today the card saves and the detail screen shows only
-      the number, with **no barcode**. Decide whether to block this at entry before
-      submitting.
-- [x] **Long input:** a 200-character QR value still renders and scans.
-- [ ] **Empty input:** NEXT / SAVE with nothing typed doesn't create a broken card.
-
-**Findings 2026-10-19** (encoder probe + emulator):
-- Back on "Code type" returns to the **scanner**, not "Card number"; the typed number is lost.
-  Back on "Card name" returns to the list; the scanned/typed code is lost.
-- NEXT / SAVE with an empty field silently cancels (back to the scanner / list).
-- 13-digit EAN-13 (8-digit EAN-8, 12-digit UPC-A) with a **wrong check digit is accepted**
-  and drawn; tills will reject it.
-- 12 typed EAN-13 digits: the bars include the check digit, but the number printed under
-  them doesn't, so it won't match the physical card.
-- Invalid input for the chosen type (letters for EAN, odd-length ITF, `é` for Code 39,
-  QR > ~2,950 characters) saves a card that shows only the number, no code.
-- Code 39 lowercase: the bars are uppercase (correct) but the number below shows lowercase.
-- "Card number" opens on the letter keyboard; in 123 mode NEXT is hidden until you close
-  the number keys (SDK editor behaviour).
-- Card names don't start with a capital (the SDK editor has `initialCaps`, unused).
+- [x] ＋ (or ADD) → ENTER MANUALLY → "Card number" opens with the keyboard.
+- [x] NEXT with nothing typed does nothing (stays on "Card number").
+- [x] Type a number → NEXT → "Code type" lists **only the types that can encode it**
+      (e.g. a 13-digit number: QR, Code 128, EAN-13, Code 39; `ABC`: QR, Code 128,
+      Code 39).
+- [x] Back on "Code type" returns to "Card number" with the number still there.
+- [x] Pick a type → "Card name". SAVE with nothing typed does nothing. Back returns to
+      "Code type". Type a name → SAVE → the card appears in the list.
+- [x] **Check digit typo:** 13 digits for EAN-13 with a wrong last digit (e.g.
+      `8710398527701`) → EAN-13 shows "This number doesn’t look right. The last digit
+      should be 7, check the number on your card." → ✕ returns to "Card number" with
+      the number kept. Same check for EAN-8 and UPC-A.
+- [x] **Check digit added:** EAN-13 with 12 digits (`871039852770`) shows
+      `8710398527707` under the bars, identical to typing all 13. Same for EAN-8 (7/8)
+      and UPC-A (11/12). *(Unit tests: `CodeInputTest`.)*
+- [x] **Code 39:** lowercase input is saved and shown as uppercase. *(Unit test.)*
+- [x] **Long input:** a 200-character QR value still renders. Over ~2,950 characters no
+      type is offered ("No code type fits this number.").
+- [ ] Known SDK limits (can't fix in the Wallet): "Card number" opens on the letter
+      keyboard, and in 123 mode NEXT is hidden until you close the number keys.
 
 ## 6. View a card (the core job)
 

@@ -20,6 +20,7 @@ import com.thelightphone.sdk.ui.LightText
 import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.wallet.code.CodeEncoder
+import com.thelightphone.wallet.code.CodeInput
 import com.thelightphone.wallet.code.CodeGeometry
 import com.thelightphone.wallet.code.CodeType
 import kotlin.math.floor
@@ -63,7 +64,9 @@ fun CardCodeSurface(
         }
         Spacer(Modifier.height(PADDING_UNITS.gridUnitsAsDp()))
         LightText(
-            text = code,
+            // Matches the bars (and the physical card), even for cards saved before
+            // codes were normalized on save.
+            text = CodeInput.normalize(code, codeType),
             variant = LightTextVariant.Detail,
             color = CODE_INK,
         )
