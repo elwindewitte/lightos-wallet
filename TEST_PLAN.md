@@ -243,9 +243,9 @@ reopening, returns to that card. No crashes in the log.
 
 From CLAUDE.md's design constraints and Light's Tool Guidelines.
 
-- [ ] Black and white only: no screen relies on color to make sense.
-- [ ] One screen, one job: no feeds, dashboards or links between features.
-- [ ] No notifications, badges, or anything that pulls you back into the tool.
+- [x] Black and white only: no screen relies on color to make sense.
+- [x] One screen, one job: no feeds, dashboards or links between features.
+- [x] No notifications, badges, or anything that pulls you back into the tool.
 - [ ] No analytics, tracking or ads, and no data leaves the device.
 - [ ] Text uses the SDK styles and spacing matches other LightOS tools (compare with
       Authenticator and Weather). **Compare fonts on a real LP3 only:** LightOS uses
@@ -254,10 +254,29 @@ From CLAUDE.md's design constraints and Light's Tool Guidelines.
       than Authenticator, whose emulator build has Akkurat bundled. On an LP3, Akkurat is
       a system font and the SDK picks it up automatically. Never add the font files to
       this repo.
-- [ ] Every screen can be left with the hardware back key, and back never exits the
+- [x] Every screen can be left with the hardware back key, and back never exits the
       tool unexpectedly.
-- [ ] Turn on dark/light theme in LightOS settings (if available) and check every
+- [x] Turn on dark/light theme in LightOS settings (if available) and check every
       screen above again in both.
+
+**Results 2026-10-19:**
+- *Colour:* 0 coloured pixels on every Wallet screen checked (list, empty state, card,
+  QR, rename, type picker, error message, select, light theme). The only colour comes from
+  the SDK keyboard's emoji layout and emoji typed into names.
+- *Notifications:* no notification permission; push stays off (`ToolEntryPoint` defaults).
+- *Theme:* LightOS doesn't switch tools' theme today (only `LightThemeController`, default
+  dark). A temporary build forced light theme: list, card, rename and search all render
+  correctly, and the barcode stays black on white.
+- [ ] **Data leaving the device (open):** the SDK's camera scanner uses Google ML Kit
+  barcode scanning 17.3.0, which queues usage events (`FIREBASE_ML_SDK`) in
+  `databases/com.google.android.datatransport.events` and uploads them to
+  `firebaselogging.googleapis.com` when online (seen succeeding, HTTP 200, from the
+  Wallet's own process). An event holds the package name, app version, ML Kit version,
+  locale and a per-install ID; no card numbers or images were seen. It comes from
+  `sdk/ui`, not the Wallet, and Light's Authenticator has the same queue. Decide how to
+  disclose it in the submission and whether to raise it with Light (Tool Guidelines:
+  "clear disclosure of any data that leaves the device").
+- [ ] *Typography:* compare on a real LP3 (the emulator shows Roboto, see CLAUDE.md › Fonts).
 
 ## 11. Submit
 
