@@ -159,7 +159,7 @@ Code 39).
   Bigger bars matter more on the small screen, and ZXing reads them all. If a till ever
   refuses one, revisit this first.
 
-## 7. Edit & delete
+## 7. Rename & delete
 
 - [x] Card → RENAME → "Rename" shows the current name. Change it → SAVE → the new
       name shows on the card and in the list.
