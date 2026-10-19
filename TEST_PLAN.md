@@ -188,18 +188,26 @@ and removes exactly those two.
 
 ## 8. Search
 
-- [ ] Search → keyboard opens and the field shows a cursor.
-- [ ] With nothing typed it shows recently opened cards, or "Type to search your cards"
+- [x] Search → keyboard opens and the field shows a cursor.
+- [x] With nothing typed it shows recently opened cards, or "Type to search your cards"
       if you haven't opened any.
-- [ ] Typing filters live, without pressing Enter (e.g. "he" → Albert Heijn, Shell).
-- [ ] Matching ignores case ("SHELL" finds Shell).
-- [ ] Gibberish shows "No cards found".
-- [ ] Backspace deletes one character; **long-press** backspace deletes a word.
-- [ ] Return doesn't add a new line.
-- [ ] Emoji and accent keyboards show a close button; the main layouts don't.
-- [ ] Tapping a result opens that card; back returns to the list.
-- [ ] The ✕ and hardware back both leave search without exiting the tool.
-- [ ] Recents: open card A, then B. Search with nothing typed shows B first, then A.
+- [x] Typing filters live, without pressing Enter (e.g. "he" → Albert Heijn, Shell).
+- [x] Matching ignores case ("SHELL" finds Shell).
+- [x] Gibberish shows "No cards found".
+- [x] Backspace deletes one character; **long-press** backspace deletes a word.
+- [x] Return doesn't add a new line.
+- [x] Emoji and accent keyboards show a close button; the main layouts don't.
+- [x] Tapping a result opens that card; back returns to the list.
+- [x] The ✕ and hardware back both leave search without exiting the tool.
+- [x] Recents: open card A, then B. Search with nothing typed shows B first, then A.
+
+**Results 2026-10-19** (scripted, `.context/s8.py`): empty search with no recents shows
+"Type to search your cards"; "ORS" finds Ors and orsx (case ignored); one backspace →
+"OR"; gibberish → "No cards found"; long-press backspace clears the word; Return after
+"ab" adds no new line; emoji and accent (long-press e) keyboards show a close ˅, the main
+letters don't; a result opens the card and Back lands on the list; after opening Gitf,
+dup, hlong the empty search lists hlong, dup, Gitf; ✕ and hardware Back both return to
+the list. Recents are kept in memory only, so they reset when the tool restarts.
 
 ## 9. Durability & real-world use
 
