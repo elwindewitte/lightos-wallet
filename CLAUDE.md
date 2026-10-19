@@ -124,8 +124,8 @@ so all tool code builds against the public SDK API. Keep it that way.
 
 ### Screens & navigation
 - `HomeScreen` (`@InitialScreen`) — the card list (Search / EDIT / ＋ bottom bar). With no
-  cards it shows a first-run empty state instead: no bottom bar, one large centered
-  ＋ ADD CARD target.
+  cards it shows a first-run empty state instead: a short centered explanation and a
+  bottom bar with a single text button, ADD (the Authenticator pattern).
 - `SearchScreen` (returns the tapped `LoyaltyCard`; Home opens it) and `SelectCardsScreen`
   (bulk delete; returns the ids to delete after `DeleteCardConfirmScreen`) are **separate
   screens, not modes of Home**. Reason: the SDK's hardware-back path

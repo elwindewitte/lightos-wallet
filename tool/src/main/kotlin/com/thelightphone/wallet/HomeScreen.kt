@@ -3,16 +3,15 @@ package com.thelightphone.wallet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewModelScope
 import com.thelightphone.sdk.InitialScreen
 import com.thelightphone.sdk.LightScreen
@@ -21,7 +20,6 @@ import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.buildDatabase
 import com.thelightphone.sdk.ui.LightBarButton
 import com.thelightphone.sdk.ui.LightBottomBar
-import com.thelightphone.sdk.ui.LightIcon
 import com.thelightphone.sdk.ui.LightIcons
 import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
@@ -208,12 +206,10 @@ private fun BrowseContent(
     }
 }
 
-/** Size of the empty state's add icon, in grid units. */
-private const val EMPTY_ADD_ICON_UNITS = 4f
-
 /**
- * First run: nothing to search or edit yet, so no bottom bar. Adding the first card
- * is the only action, shown as one large centered target (icon + label).
+ * First run: a short explanation and a single ADD in the bottom bar (the same
+ * pattern as LightOS's Authenticator). Search and EDIT only appear once there are
+ * cards to act on.
  */
 @Composable
 private fun EmptyContent(onAdd: () -> Unit) {
@@ -227,24 +223,19 @@ private fun EmptyContent(onAdd: () -> Unit) {
         Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(horizontal = 1f.gridUnitsAsDp()),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                modifier = Modifier
-                    .lightClickable(onClick = onAdd)
-                    .padding(2f.gridUnitsAsDp()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                LightIcon(
-                    icon = LightIcons.ADD,
-                    size = EMPTY_ADD_ICON_UNITS,
-                    contentDescription = null,
-                )
-                Spacer(modifier = Modifier.height(1f.gridUnitsAsDp()))
-                LightText(text = "ADD CARD", variant = LightTextVariant.Button)
-            }
+            LightText(
+                text = "No cards yet.\nAdd a loyalty card to show\nits barcode at the till.",
+                variant = LightTextVariant.Copy,
+                align = TextAlign.Center,
+                lighten = true,
+            )
         }
+
+        LightBottomBar(items = listOf(LightBarButton.Text(text = "ADD", onClick = onAdd)))
     }
 }
 
