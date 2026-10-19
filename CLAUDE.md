@@ -87,6 +87,9 @@ Use the `lightContext` wrapper instead of a raw Context.
   resetting Home), and set LightOS Settings → Allowed Tools → **All Tools**, otherwise
   the Wallet is refused ("unable to request camera permission").
 - Pre-submission checklist: `TEST_PLAN.md`.
+- Mock data: `./scripts/load-mock-cards.sh` replaces every card on the emulator with the 10
+  fake Dutch loyalty cards in `scripts/mock-cards.sql` (all 7 code types except ITF, valid
+  check digits) and clears recents. Use it before manual testing or screenshots.
 - Sideload: `./scripts/install-emulator.sh` (see the `serverPackage` note below).
   **This only works against the LightOS emulator (AVD), not a real Light Phone III.**
 - **Installing on real LP3 hardware is currently BLOCKED.** USB debugging / adb install
