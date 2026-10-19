@@ -5,7 +5,7 @@ versionCode = 1
 versionName = "1.0.0"
 permissions = ["android.permission.INTERNET", "android.permission.CAMERA"]
 capabilities = []
-# We run on the LightOS emulator, so build with -DlightSdk.allowAltServerPackage=true.
-# For a real LP3, swap to the commented line below.
-# serverPackage = "com.lightos"
-serverPackage = "com.thelightphone.sdk.emulator"
+# Must stay "com.lightos": CI and Light's tool-library build server use it as-is.
+# For the LightOS emulator, run scripts/install-emulator.sh, which swaps in
+# "com.thelightphone.sdk.emulator" for that build only.
+serverPackage = "com.lightos"

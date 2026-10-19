@@ -77,13 +77,17 @@ Use the `lightContext` wrapper instead of a raw Context.
   `local.properties` (or env `GITHUB_ACTOR`/`GITHUB_TOKEN`).
 - Build APK: `./gradlew :tool:assembleDebug` → `tool/build/outputs/apk/debug/tool-debug.apk`.
 - Validate: `./gradlew check` (runs the plugin's dependency/source guardrails).
-- **Emulator build flag:** `tool/lighttool.toml` sets
-  `serverPackage = "com.thelightphone.sdk.emulator"`, and the plugin rejects any value
-  other than `com.lightos` unless every Gradle command gets
-  `-DlightSdk.allowAltServerPackage=true` (e.g.
-  `./gradlew :tool:check -DlightSdk.allowAltServerPackage=true`). For a real LP3, switch
-  to `com.lightos` and drop the flag.
-- Sideload: `adb install -r tool/build/outputs/apk/debug/tool-debug.apk`.
+- **`serverPackage` stays `com.lightos` in git.** CI and Light's tool-library build server
+  use it as-is, and the plugin rejects anything else unless
+  `-DlightSdk.allowAltServerPackage=true` is passed. For the LightOS emulator, run
+  `./scripts/install-emulator.sh`: it swaps in `com.thelightphone.sdk.emulator`, runs
+  `:tool:installDebug` with the flag, and always restores the toml.
+- Emulator gotchas: boot with `emulator -avd Light_Phone_3 -writable-system` **every
+  time** (without it Android drops the LightOS emulator app, wiping its settings and
+  resetting Home), and set LightOS Settings → Allowed Tools → **All Tools**, otherwise
+  the Wallet is refused ("unable to request camera permission").
+- Pre-submission checklist: `TEST_PLAN.md`.
+- Sideload: `./scripts/install-emulator.sh` (see the `serverPackage` note below).
   **This only works against the LightOS emulator (AVD), not a real Light Phone III.**
 - **Installing on real LP3 hardware is currently BLOCKED.** USB debugging / adb install
   onto the device is not available. Upstream now documents the intended path — the
