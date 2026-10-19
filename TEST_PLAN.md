@@ -54,16 +54,26 @@ submission on its own, however well the app works.
 - [x] LightOS **Settings → Allowed Tools** is **All Tools**.
 - [x] Install the current code: `./scripts/install-emulator.sh`
 - [x] Afterwards, `git status` shows `tool/lighttool.toml` unchanged.
+- [ ] After uninstalling or changing the tool id, restart LightOS so its tool list
+      refreshes: `adb shell am force-stop com.thelightphone.sdk.emulator`, then press Home.
+      (The emulator only refreshes the list for Tool Manager installs; a stale entry
+      silently does nothing when tapped.)
 
 ## 3. First launch & empty state
 
 Start from a clean slate: `adb uninstall io.github.elwindewitte.wallet`, then
 reinstall.
 
-- [ ] "Wallet" appears in the LightOS tool list and opens.
-- [ ] The empty list shows "No cards yet. Tap + to add one."
-- [ ] No permission prompt appears until you try to scan.
-- [ ] The bottom bar shows Search, EDIT and ＋, and nothing overlaps.
+- [x] "Wallet" appears in the LightOS tool list and opens.
+- [x] The empty list shows "No cards yet. Tap + to add one."
+- [x] No permission prompt appears until you try to scan.
+- [x] The bottom bar shows Search, EDIT and ＋, and nothing overlaps.
+- [ ] **EDIT on an empty list** opens "Select to delete…" with nothing to select.
+      *Found 2026-10-19:* hide or disable EDIT (and Search?) while there are no cards.
+- [ ] **Hardware back in select mode** returns to the list.
+      *Found 2026-10-19:* it **exits the tool** instead. The SDK sends the hardware back key
+      straight to its back stack and never calls `onBackPressed()`, and the guardrail
+      blocks `androidx.activity` (so no `BackHandler`). Affects Search mode too.
 
 ## 4. Add a card — camera scan
 
