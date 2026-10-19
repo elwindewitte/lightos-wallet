@@ -1,25 +1,11 @@
 package com.thelightphone.wallet
 
-import android.util.Log
 import com.thelightphone.sdk.EntryPoint
 import com.thelightphone.sdk.LightEntryPoint
-import com.thelightphone.sdk.shared.LightServerData
-import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * The SDK's required tool entry point. The Wallet needs no startup work and no push
+ * notifications, so it keeps every [LightEntryPoint] default.
+ */
 @EntryPoint
-object ToolEntryPoint : LightEntryPoint {
-    // called when Tool first launches, use to initialize dependencies etc
-    override suspend fun onToolCreate(
-        serverData: StateFlow<LightServerData?>,
-    ) {
-        serverData.collect {
-            Log.d("ToolEntryPoint", "Current LightOS registration data: $it")
-        }
-    }
-
-    override suspend fun onPushNotification(
-        data: ByteArray,
-    ) {
-        Log.d("ToolEntryPoint", "received push notification: $data")
-    }
-}
+object ToolEntryPoint : LightEntryPoint

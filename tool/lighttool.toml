@@ -3,7 +3,7 @@ id = "com.thelightphone.app"
 label = "Wallet"
 versionCode = 1
 versionName = "1.0.0"
-permissions = ["android.permission.INTERNET", "android.permission.CAMERA"]
+permissions = ["android.permission.CAMERA"]
 capabilities = []
 # Must stay "com.lightos": CI and Light's tool-library build server use it as-is.
 # For the LightOS emulator, run scripts/install-emulator.sh, which swaps in
