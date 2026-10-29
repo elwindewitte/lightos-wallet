@@ -84,7 +84,9 @@ Use the `lightContext` wrapper instead of a raw Context.
   `:tool:installDebug` with the flag, and always restores the toml.
 - Emulator gotchas: boot with `emulator -avd Light_Phone_3 -writable-system` **every
   time** (without it Android drops the LightOS emulator app, wiping its settings and
-  resetting Home), and set LightOS Settings → Allowed Tools → **All Tools**, otherwise
+  resetting Home) — `./scripts/start-emulator.sh` does this if no emulator is running
+  and waits for boot (Conductor's "Tool" run script calls it, then
+  `install-emulator.sh`, then launches the Wallet) — and set LightOS Settings → Allowed Tools → **All Tools**, otherwise
   the Wallet is refused ("unable to request camera permission").
 - Pre-submission checklist: `TEST_PLAN.md`.
 - Mock data: `./scripts/load-mock-cards.sh` replaces every card on the emulator with the 10

@@ -206,16 +206,12 @@ private fun BrowseContent(
             .fillMaxSize()
             .background(LightThemeTokens.colors.background),
     ) {
-        LightTopBar(
-            center = LightTopBarCenter.Text("Wallet"),
-            modifier = Modifier.padding(bottom = 1f.gridUnitsAsDp()),
-        )
-
+        // No top bar: the list starts at the top so more cards fit on screen.
         LightScrollView(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(start = 1f.gridUnitsAsDp()),
+                .padding(start = 1f.gridUnitsAsDp(), top = 1f.gridUnitsAsDp()),
         ) {
             cards.forEach { card ->
                 CardRow(name = card.name, onClick = { onOpen(card) })
