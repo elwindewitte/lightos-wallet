@@ -126,10 +126,11 @@ so all tool code builds against the public SDK API. Keep it that way.
 - **Schema changes & migrations.** Each DB version's structure is exported to
   `tool/schemas/com.thelightphone.wallet.data.WalletDatabase/<version>.json` (committed;
   `exportSchema = true` + the `ksp { room.schemaLocation }` arg in `tool/build.gradle.kts`).
-  The SDK's `buildDatabase()` is `Room.databaseBuilder(...).build()` with no hook for
-  `addMigrations`/fallbacks, so **hand-written `Migration`s can't be registered — use Room
-  `@AutoMigration`**, which diffs these JSON files. An update that changes the schema
-  without a migration makes Room throw on open (the tool crashes; data stays on disk).
+  **Prefer Room `@AutoMigration`**, which diffs these JSON files. Since SDK 0.2.1,
+  `buildDatabase()` also takes an optional `configure` lambda for the Room builder, so a
+  hand-written `Migration` can be registered with `addMigrations` when an auto-migration
+  can't express the change. An update that changes the schema without a migration makes
+  Room throw on open (the tool crashes; data stays on disk).
   To change the schema:
   1. Edit the entity, bump `version` in `@Database`, and add
      `autoMigrations = [AutoMigration(from = N, to = N + 1)]` (with an `AutoMigrationSpec`
