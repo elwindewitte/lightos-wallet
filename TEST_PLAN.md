@@ -17,8 +17,7 @@ submission on its own, however well the app works.
 
 - [x] **Tool id is yours and final:** `io.github.elwindewitte.wallet` (based on your GitHub
       account, so nobody else can claim it). **It can't change after the tool is registered.**
-- [ ] **The GitHub repo is public.** Light builds from a public commit, and the
-      repo is currently **private**.
+- [x] **The GitHub repo is public.** Light builds from a public commit.
 - [x] **`serverPackage = "com.lightos"`** in `tool/lighttool.toml` on the commit you
       submit. CI enforces this.
 - [x] **`versionCode` is higher than the last version you submitted** (start at `1`), and
@@ -27,8 +26,8 @@ submission on its own, however well the app works.
       built app still lists `INTERNET` because SDK libraries — okhttp and the scanner's
       Google library — add it; worth a line in your submission notes.)
 - [x] **No leftover template code.** `ToolEntryPoint.kt` is the bare required shell.
-- [ ] **Built on the latest Light SDK.** Run `/sync-upstream` shortly before submitting.
-- [ ] **At least one screenshot** ready for the Dashboard listing.
+- [x] **Built on the latest Light SDK.** Run `/sync-upstream` shortly before submitting.
+- [x] **At least one screenshot** ready for the Dashboard listing.
 - [x] **Third-party code is credited.** `QrEncoder.kt` carries Nayuki's full MIT notice.
 
 ---
